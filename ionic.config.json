@@ -1,0 +1,7 @@
+{
+  "name": "CaesarCipherApp",
+  "integrations": {
+    "capacitor": {}
+  },
+  "type": "vue-vite"
+}
