@@ -1,0 +1,210 @@
+<template>
+  <ion-page>
+    <ion-header>
+      <ion-toolbar>
+        <ion-title>🛠️ LakbayNaujan Admin</ion-title>
+        <ion-buttons slot="end"><ion-button @click="logout">Logout</ion-button></ion-buttons>
+      </ion-toolbar>
+    </ion-header>
+    <ion-content>
+      <div class="page-shell">
+        <div class="hero"><small>ADMINISTRATOR · EXCLUSIVE ACCESS</small><h1>Tourism Management</h1><p>Add, edit or remove destinations, photos, activities and nearby businesses.</p></div>
+        <div class="subpanel">
+          <div class="row-actions" style="justify-content:space-between">
+            <strong>Tourist spots: {{ spots.length }}</strong>
+            <ion-button @click="startNew">{{ editing ? 'Cancel edit / New spot' : 'Add tourist spot' }}</ion-button>
+          </div>
+          <p v-if="message" class="feedback" :class="{error: errorState}">{{ message }}</p>
+          <div v-for="spot in spots" :key="spot.id" class="row-actions" style="justify-content:space-between;border-bottom:1px solid #e7eee7;padding:10px 0">
+            <div style="min-width:160px;flex:1"><strong>{{ spot.name }}</strong><div class="muted">{{ spot.address }}</div></div>
+            <ion-button size="small" fill="outline" @click="editSpot(spot)">Edit</ion-button>
+            <ion-button size="small" fill="outline" color="danger" @click="deleteSpot(spot)">Delete</ion-button>
+          </div>
+        </div>
+
+        <h2 class="section-heading">{{ editing ? 'Edit tourist spot' : 'Add new tourist spot' }}</h2>
+        <form @submit.prevent="save" class="stack">
+          <div><div class="field-label">Tourist spot name *</div><ion-input v-model="form.name" class="field-input" required placeholder="Naujan Lake" /></div>
+          <div><div class="field-label">Category *</div><ion-input v-model="form.category" class="field-input" required placeholder="Lake, Nature, Heritage..." /></div>
+          <div><div class="field-label">Full description *</div><ion-textarea v-model="form.description" class="field-input" auto-grow :rows="4" required placeholder="History, highlights, travel tips..." /></div>
+          <div><div class="field-label">Address / Barangay *</div><ion-input v-model="form.address" class="field-input" required placeholder="Naujan, Oriental Mindoro" /></div>
+          <div class="card-grid">
+            <div><div class="field-label">Google Maps latitude (optional)</div><ion-input v-model="form.latitude" class="field-input" type="number" placeholder="13.3..." /></div>
+            <div><div class="field-label">Google Maps longitude (optional)</div><ion-input v-model="form.longitude" class="field-input" type="number" placeholder="121.3..." /></div>
+          </div>
+          <p class="muted" style="font-size:13px;margin:0">For a precise map pin, copy the latitude and longitude of the destination from Google Maps. Otherwise, directions will search using its name and address.</p>
+          <div class="row-actions"><ion-button type="button" fill="outline" size="small" @click="previewMap">Preview Google Maps location</ion-button></div>
+          <div class="card-grid">
+            <div><div class="field-label">Entrance fee</div><ion-input v-model="form.entrance_fee" class="field-input" placeholder="Free / ₱50 / Ask on-site" /></div>
+            <div><div class="field-label">Opening hours</div><ion-input v-model="form.opening_hours" class="field-input" placeholder="8:00 AM–5:00 PM" /></div>
+          </div>
+          <div><div class="field-label">Best time to visit</div><ion-input v-model="form.best_time_to_visit" class="field-input" placeholder="Morning / November–April" /></div>
+          <div class="subpanel">
+            <div class="field-label">Tourist photo (JPEG, PNG or WebP, max 5 MB)</div>
+            <input type="file" accept="image/jpeg,image/png,image/webp" @change="pickImage" />
+            <p class="muted" v-if="selectedImage">Selected: {{ selectedImage.name }}</p>
+            <img v-else-if="form.image_url" class="cover" style="max-width:300px;height:150px;border-radius:8px" :src="form.image_url" alt="Current destination photo" />
+          </div>
+          <div class="subpanel">
+            <div class="field-label">✅ Bucket list / Things to do (one activity per line)</div>
+            <ion-textarea v-model="form.bucketListText" class="field-input" auto-grow :rows="4" placeholder="Take landscape photos&#10;Explore the lake&#10;Try local food" />
+          </div>
+          <h2 class="section-heading">🍲 Nearby carinderias / sari-sari stores</h2>
+          <p class="muted">Enter establishments you have verified are near this attraction. Each can have its own Google Maps location.</p>
+          <div v-for="(place, index) in nearbyDrafts" :key="index" class="subpanel stack">
+            <div class="row-actions" style="justify-content:space-between"><strong>Nearby place {{ index + 1 }}</strong><ion-button size="small" fill="clear" color="danger" @click="nearbyDrafts.splice(index, 1)">Remove</ion-button></div>
+            <div><div class="field-label">Establishment name *</div><ion-input v-model="place.name" class="field-input" placeholder="Store or carinderia name" /></div>
+            <div><div class="field-label">Type</div>
+              <ion-select v-model="place.kind" interface="popover" class="field-input">
+                <ion-select-option value="Carinderia">Carinderia</ion-select-option>
+                <ion-select-option value="Sari-sari Store">Sari-sari Store</ion-select-option>
+                <ion-select-option value="Other">Other</ion-select-option>
+              </ion-select>
+            </div>
+            <div><div class="field-label">Address / Barangay *</div><ion-input v-model="place.address" class="field-input" placeholder="Address in Naujan" /></div>
+            <div class="card-grid">
+              <div><div class="field-label">Latitude</div><ion-input v-model="place.lat" class="field-input" type="number" placeholder="Optional" /></div>
+              <div><div class="field-label">Longitude</div><ion-input v-model="place.lon" class="field-input" type="number" placeholder="Optional" /></div>
+            </div>
+          </div>
+          <ion-button type="button" expand="block" fill="outline" @click="addNearby">+ Add nearby establishment</ion-button>
+          <ion-button type="submit" expand="block" :disabled="busy">{{ busy ? 'Saving...' : editing ? 'Save changes' : 'Publish tourist spot' }}</ion-button>
+        </form>
+      </div>
+    </ion-content>
+  </ion-page>
+</template>
+<script setup lang="ts">
+import { onMounted, reactive, ref } from 'vue';
+import { useRouter } from 'vue-router';
+import { IonPage, IonHeader, IonToolbar, IonTitle, IonButtons, IonButton, IonContent, IonInput, IonTextarea, IonSelect, IonSelectOption } from '@ionic/vue';
+import { supabase } from '../lib/supabase';
+import type { TouristSpot, NearbyPlace } from '../lib/types';
+import { mapsSearch, openMaps } from '../lib/types';
+
+const router = useRouter();
+const spots = ref<TouristSpot[]>([]); const editing = ref(false); const busy = ref(false);
+const selectedImage = ref<File | null>(null); const message = ref(''); const errorState = ref(false);
+const form = reactive({ id: '', name: '', category: 'Nature', description: '', address: '', latitude: '', longitude: '',
+  entrance_fee: '', opening_hours: '', best_time_to_visit: '', image_url: '', bucketListText: '' });
+type StoreDraft = { name: string; kind: 'Carinderia' | 'Sari-sari Store' | 'Other'; address: string; lat: string; lon: string };
+const nearbyDrafts = ref<StoreDraft[]>([]);
+
+function coord(value: unknown, max: number): number | null {
+  const stringValue = String(value ?? '').trim();
+  if (!stringValue) return null;
+  const parsed = Number(stringValue);
+  if (!Number.isFinite(parsed) || Math.abs(parsed) > max) throw new Error(`Invalid coordinate: ${stringValue}`);
+  return parsed;
+}
+function addNearby() { nearbyDrafts.value.push({ name: '', kind: 'Carinderia', address: '', lat: '', lon: '' }); }
+function startNew() {
+  editing.value = false; selectedImage.value = null; nearbyDrafts.value = []; message.value = '';
+  Object.assign(form, { id: '', name: '', category: 'Nature', description: '', address: '', latitude: '', longitude: '',
+    entrance_fee: '', opening_hours: '', best_time_to_visit: '', image_url: '', bucketListText: '' });
+}
+function previewMap() {
+  try {
+    openMaps(mapsSearch({ name: form.name, address: form.address, latitude: coord(form.latitude, 90), longitude: coord(form.longitude, 180) }));
+  } catch (e) { showError(e); }
+}
+function pickImage(e: Event) {
+  const file = (e.target as HTMLInputElement).files?.[0];
+  if (!file) { selectedImage.value = null; return; }
+  if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 5 * 1024 * 1024) {
+    selectedImage.value = null; (e.target as HTMLInputElement).value = '';
+    showError(new Error('Choose a JPEG, PNG or WebP image no larger than 5 MB.')); return;
+  }
+  selectedImage.value = file;
+}
+function showError(e: unknown) { errorState.value = true; message.value = e instanceof Error ? e.message : 'Something went wrong.'; }
+async function loadSpots() {
+  const { data, error } = await supabase.from('tourist_spots').select('*').order('created_at', { ascending: false });
+  if (error) throw error;
+  spots.value = (data ?? []) as TouristSpot[];
+}
+async function editSpot(spot: TouristSpot) {
+  editing.value = true; message.value = ''; selectedImage.value = null;
+  Object.assign(form, { id: spot.id, name: spot.name, category: spot.category, description: spot.description,
+    address: spot.address, latitude: spot.latitude === null ? '' : String(spot.latitude),
+    longitude: spot.longitude === null ? '' : String(spot.longitude),
+    entrance_fee: spot.entrance_fee ?? '', opening_hours: spot.opening_hours ?? '',
+    best_time_to_visit: spot.best_time_to_visit ?? '', image_url: spot.image_url ?? '',
+    bucketListText: spot.bucket_list.join('\n') });
+  nearbyDrafts.value = [];
+  try {
+    const { data, error } = await supabase.from('nearby_places').select('*').eq('spot_id', spot.id).order('name');
+    if (error) throw error;
+    nearbyDrafts.value = ((data ?? []) as NearbyPlace[]).map(p => ({ name: p.name, kind: p.kind,
+      address: p.address, lat: p.latitude === null ? '' : String(p.latitude),
+      lon: p.longitude === null ? '' : String(p.longitude) }));
+  } catch (e) { showError(e); }
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+async function save() {
+  if (busy.value) return;
+  message.value = ''; busy.value = true;
+  try {
+    if (!form.name.trim() || !form.description.trim() || !form.address.trim()) throw new Error('Complete the required fields.');
+    const latitude = coord(form.latitude, 90); const longitude = coord(form.longitude, 180);
+    if ((latitude === null) !== (longitude === null)) throw new Error('Enter both latitude and longitude, or leave both blank.');
+    const normalizedStores = nearbyDrafts.value.map(p => {
+      if (!p.name.trim() || !p.address.trim()) throw new Error('Each nearby establishment needs a name and address.');
+      const lat = coord(p.lat, 90); const lon = coord(p.lon, 180);
+      if ((lat === null) !== (lon === null)) throw new Error('Nearby establishment coordinates must be a pair.');
+      return { name: p.name.trim(), kind: p.kind, address: p.address.trim(), latitude: lat, longitude: lon };
+    });
+    let imageUrl: string | null = form.image_url || null;
+    if (selectedImage.value) {
+      const file = selectedImage.value;
+      const ext = file.type === 'image/png' ? 'png' : file.type === 'image/webp' ? 'webp' : 'jpg';
+      const path = `spots/${crypto.randomUUID()}.${ext}`;
+      const { error: uploadError } = await supabase.storage.from('tourist-images').upload(path, file, { contentType: file.type });
+      if (uploadError) throw uploadError;
+      imageUrl = supabase.storage.from('tourist-images').getPublicUrl(path).data.publicUrl;
+    }
+    const payload = { name: form.name.trim(), category: form.category.trim() || 'Nature',
+      description: form.description.trim(), address: form.address.trim(), latitude, longitude,
+      entrance_fee: form.entrance_fee.trim() || null, opening_hours: form.opening_hours.trim() || null,
+      best_time_to_visit: form.best_time_to_visit.trim() || null, image_url: imageUrl,
+      bucket_list: form.bucketListText.split('\n').map(s => s.trim()).filter(Boolean) };
+    let spotId: string;
+    if (editing.value) {
+      const { data, error } = await supabase.from('tourist_spots').update(payload).eq('id', form.id).select('id').single();
+      if (error) throw error;
+      spotId = data.id;
+    } else {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Please log in again.');
+      const { data, error } = await supabase.from('tourist_spots').insert({ ...payload, created_by: user.id }).select('id').single();
+      if (error) throw error;
+      spotId = data.id;
+    }
+    // MVP synchronization: delete old nearby entries, then insert the new list.
+    // If the second request fails, the spot may be saved without all stores; retry the edit.
+    const { error: deleteError } = await supabase.from('nearby_places').delete().eq('spot_id', spotId);
+    if (deleteError) throw deleteError;
+    if (normalizedStores.length) {
+      const { error: storeError } = await supabase.from('nearby_places').insert(normalizedStores.map(p => ({ ...p, spot_id: spotId })));
+      if (storeError) throw storeError;
+    }
+    startNew();
+    await loadSpots();
+    errorState.value = false; message.value = 'Tourist spot saved successfully.';
+  } catch (e) { showError(e); }
+  finally { busy.value = false; }
+}
+async function deleteSpot(spot: TouristSpot) {
+  if (!window.confirm(`Delete ${spot.name} and all its nearby establishment records?`)) return;
+  busy.value = true; message.value = '';
+  try {
+    const { error } = await supabase.from('tourist_spots').delete().eq('id', spot.id);
+    if (error) throw error;
+    if (editing.value && form.id === spot.id) startNew();
+    await loadSpots(); errorState.value = false; message.value = 'Destination deleted.';
+  } catch (e) { showError(e); }
+  finally { busy.value = false; }
+}
+async function logout() { await supabase.auth.signOut(); await router.replace('/login'); }
+onMounted(async () => { try { await loadSpots(); } catch (e) { showError(e); } });
+</script>

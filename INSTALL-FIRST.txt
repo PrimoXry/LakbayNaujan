@@ -1,0 +1,11 @@
+LAKBAYNAUJAN STARTER
+
+1. Open README.md.
+2. BACK UP your actual Ionic Vue project src directory.
+3. Copy this starter's src directory into your actual Ionic project.
+4. Create Supabase project and run supabase/schema.sql in SQL Editor.
+5. Copy .env.example into your actual project's root as .env and put your Supabase URL + anon/publishable key.
+6. Run npm install @supabase/supabase-js && ionic serve.
+7. Sign up, verify your emailed code, then manually promote the one admin via SQL as shown in README.
+
+Do not put secret/service_role keys in the Ionic app.
