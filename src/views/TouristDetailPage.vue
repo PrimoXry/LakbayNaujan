@@ -43,21 +43,26 @@ import { onIonViewWillEnter, IonPage, IonHeader, IonToolbar, IonTitle, IonButton
 import { supabase } from '../lib/supabase';
 import type { TouristSpot, NearbyPlace } from '../lib/types';
 import { mapsDirections, mapsSearch, openMaps } from '../lib/types';
+import { errorMessage } from '../lib/errors';
 const route = useRoute(); const spot = ref<TouristSpot | null>(null); const nearby = ref<NearbyPlace[]>([]); const busy = ref(false); const message = ref('');
+let loadRequest = 0;
 async function load() {
+  const request = ++loadRequest;
   busy.value = true; message.value = ''; spot.value = null; nearby.value = [];
   try {
     const id = String(route.params.id);
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) throw new Error('This destination link is invalid.');
     const [spotResult, nearbyResult] = await Promise.all([
       supabase.from('tourist_spots').select('*').eq('id', id).maybeSingle(),
       supabase.from('nearby_places').select('*').eq('spot_id', id).order('name'),
     ]);
     if (spotResult.error) throw spotResult.error;
     if (nearbyResult.error) throw nearbyResult.error;
+    if (request !== loadRequest) return;
     spot.value = spotResult.data as TouristSpot | null;
     nearby.value = (nearbyResult.data ?? []) as NearbyPlace[];
-  } catch (e) { message.value = e instanceof Error ? e.message : 'Could not load details.'; }
-  finally { busy.value = false; }
+  } catch (e) { if (request === loadRequest) message.value = errorMessage(e, 'Could not load details.'); }
+  finally { if (request === loadRequest) busy.value = false; }
 }
 onIonViewWillEnter(load);
 </script>

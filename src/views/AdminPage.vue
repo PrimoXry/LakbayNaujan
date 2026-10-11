@@ -3,7 +3,7 @@
     <ion-header>
       <ion-toolbar>
         <ion-title>🛠️ LakbayNaujan Admin</ion-title>
-        <ion-buttons slot="end"><ion-button @click="logout">Logout</ion-button></ion-buttons>
+        <ion-buttons slot="end"><ion-button :disabled="busy" @click="logout">Logout</ion-button></ion-buttons>
       </ion-toolbar>
     </ion-header>
     <ion-content>
@@ -12,13 +12,13 @@
         <div class="subpanel">
           <div class="row-actions" style="justify-content:space-between">
             <strong>Tourist spots: {{ spots.length }}</strong>
-            <ion-button @click="startNew">{{ editing ? 'Cancel edit / New spot' : 'Add tourist spot' }}</ion-button>
+            <ion-button :disabled="busy" @click="startNew">{{ editing ? 'Cancel edit / New spot' : 'Add tourist spot' }}</ion-button>
           </div>
           <p v-if="message" class="feedback" :class="{error: errorState}">{{ message }}</p>
           <div v-for="spot in spots" :key="spot.id" class="row-actions" style="justify-content:space-between;border-bottom:1px solid #e7eee7;padding:10px 0">
             <div style="min-width:160px;flex:1"><strong>{{ spot.name }}</strong><div class="muted">{{ spot.address }}</div></div>
-            <ion-button size="small" fill="outline" @click="editSpot(spot)">Edit</ion-button>
-            <ion-button size="small" fill="outline" color="danger" @click="deleteSpot(spot)">Delete</ion-button>
+            <ion-button size="small" fill="outline" :disabled="busy" @click="editSpot(spot)">Edit</ion-button>
+            <ion-button size="small" fill="outline" color="danger" :disabled="busy" @click="deleteSpot(spot)">Delete</ion-button>
           </div>
         </div>
 
@@ -75,12 +75,13 @@
   </ion-page>
 </template>
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue';
+import { reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { IonPage, IonHeader, IonToolbar, IonTitle, IonButtons, IonButton, IonContent, IonInput, IonTextarea, IonSelect, IonSelectOption } from '@ionic/vue';
+import { onIonViewWillEnter, IonPage, IonHeader, IonToolbar, IonTitle, IonButtons, IonButton, IonContent, IonInput, IonTextarea, IonSelect, IonSelectOption } from '@ionic/vue';
 import { supabase } from '../lib/supabase';
 import type { TouristSpot, NearbyPlace } from '../lib/types';
 import { mapsSearch, openMaps } from '../lib/types';
+import { errorMessage } from '../lib/errors';
 
 const router = useRouter();
 const spots = ref<TouristSpot[]>([]); const editing = ref(false); const busy = ref(false);
@@ -117,34 +118,39 @@ function pickImage(e: Event) {
   }
   selectedImage.value = file;
 }
-function showError(e: unknown) { errorState.value = true; message.value = e instanceof Error ? e.message : 'Something went wrong.'; }
+function showError(e: unknown) { errorState.value = true; message.value = errorMessage(e, 'Something went wrong.'); }
 async function loadSpots() {
   const { data, error } = await supabase.from('tourist_spots').select('*').order('created_at', { ascending: false });
   if (error) throw error;
   spots.value = (data ?? []) as TouristSpot[];
 }
 async function editSpot(spot: TouristSpot) {
-  editing.value = true; message.value = ''; selectedImage.value = null;
-  Object.assign(form, { id: spot.id, name: spot.name, category: spot.category, description: spot.description,
-    address: spot.address, latitude: spot.latitude === null ? '' : String(spot.latitude),
-    longitude: spot.longitude === null ? '' : String(spot.longitude),
-    entrance_fee: spot.entrance_fee ?? '', opening_hours: spot.opening_hours ?? '',
-    best_time_to_visit: spot.best_time_to_visit ?? '', image_url: spot.image_url ?? '',
-    bucketListText: spot.bucket_list.join('\n') });
-  nearbyDrafts.value = [];
+  if (busy.value) return;
+  busy.value = true; message.value = '';
   try {
     const { data, error } = await supabase.from('nearby_places').select('*').eq('spot_id', spot.id).order('name');
     if (error) throw error;
+    // Only replace the editable form after the related records have loaded.
+    editing.value = true; selectedImage.value = null;
+    Object.assign(form, { id: spot.id, name: spot.name, category: spot.category, description: spot.description,
+      address: spot.address, latitude: spot.latitude === null ? '' : String(spot.latitude),
+      longitude: spot.longitude === null ? '' : String(spot.longitude),
+      entrance_fee: spot.entrance_fee ?? '', opening_hours: spot.opening_hours ?? '',
+      best_time_to_visit: spot.best_time_to_visit ?? '', image_url: spot.image_url ?? '',
+      bucketListText: spot.bucket_list.join('\n') });
     nearbyDrafts.value = ((data ?? []) as NearbyPlace[]).map(p => ({ name: p.name, kind: p.kind,
       address: p.address, lat: p.latitude === null ? '' : String(p.latitude),
       lon: p.longitude === null ? '' : String(p.longitude) }));
   } catch (e) { showError(e); }
+  finally { busy.value = false; }
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 async function save() {
   if (busy.value) return;
   message.value = ''; busy.value = true;
+  let partialSaveMessage = '';
   try {
+    const editingId = editing.value ? form.id : null;
     if (!form.name.trim() || !form.description.trim() || !form.address.trim()) throw new Error('Complete the required fields.');
     const latitude = coord(form.latitude, 90); const longitude = coord(form.longitude, 180);
     if ((latitude === null) !== (longitude === null)) throw new Error('Enter both latitude and longitude, or leave both blank.');
@@ -154,32 +160,35 @@ async function save() {
       if ((lat === null) !== (lon === null)) throw new Error('Nearby establishment coordinates must be a pair.');
       return { name: p.name.trim(), kind: p.kind, address: p.address.trim(), latitude: lat, longitude: lon };
     });
-    let imageUrl: string | null = form.image_url || null;
-    if (selectedImage.value) {
-      const file = selectedImage.value;
+    const payload = { name: form.name.trim(), category: form.category.trim() || 'Nature',
+      description: form.description.trim(), address: form.address.trim(), latitude, longitude,
+      entrance_fee: form.entrance_fee.trim() || null, opening_hours: form.opening_hours.trim() || null,
+      best_time_to_visit: form.best_time_to_visit.trim() || null, image_url: form.image_url || null,
+      bucket_list: form.bucketListText.split('\n').map(s => s.trim()).filter(Boolean) };
+    const file = selectedImage.value;
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError) throw userError;
+    if (!user) throw new Error('Please log in again.');
+    if (file) {
       const ext = file.type === 'image/png' ? 'png' : file.type === 'image/webp' ? 'webp' : 'jpg';
       const path = `spots/${crypto.randomUUID()}.${ext}`;
       const { error: uploadError } = await supabase.storage.from('tourist-images').upload(path, file, { contentType: file.type });
       if (uploadError) throw uploadError;
-      imageUrl = supabase.storage.from('tourist-images').getPublicUrl(path).data.publicUrl;
+      payload.image_url = supabase.storage.from('tourist-images').getPublicUrl(path).data.publicUrl;
     }
-    const payload = { name: form.name.trim(), category: form.category.trim() || 'Nature',
-      description: form.description.trim(), address: form.address.trim(), latitude, longitude,
-      entrance_fee: form.entrance_fee.trim() || null, opening_hours: form.opening_hours.trim() || null,
-      best_time_to_visit: form.best_time_to_visit.trim() || null, image_url: imageUrl,
-      bucket_list: form.bucketListText.split('\n').map(s => s.trim()).filter(Boolean) };
     let spotId: string;
-    if (editing.value) {
-      const { data, error } = await supabase.from('tourist_spots').update(payload).eq('id', form.id).select('id').single();
+    if (editingId) {
+      const { data, error } = await supabase.from('tourist_spots').update(payload).eq('id', editingId).select('id').single();
       if (error) throw error;
       spotId = data.id;
     } else {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Please log in again.');
       const { data, error } = await supabase.from('tourist_spots').insert({ ...payload, created_by: user.id }).select('id').single();
       if (error) throw error;
       spotId = data.id;
     }
+    // A retry must update the row already created, rather than inserting a duplicate.
+    editing.value = true; form.id = spotId; form.image_url = payload.image_url ?? ''; selectedImage.value = null;
+    partialSaveMessage = 'The destination was saved, but nearby places could not be fully updated. Keep this form open and retry. ';
     // MVP synchronization: delete old nearby entries, then insert the new list.
     // If the second request fails, the spot may be saved without all stores; retry the edit.
     const { error: deleteError } = await supabase.from('nearby_places').delete().eq('spot_id', spotId);
@@ -188,23 +197,41 @@ async function save() {
       const { error: storeError } = await supabase.from('nearby_places').insert(normalizedStores.map(p => ({ ...p, spot_id: spotId })));
       if (storeError) throw storeError;
     }
+    partialSaveMessage = 'The destination was saved, but the list could not be refreshed. ';
     startNew();
     await loadSpots();
     errorState.value = false; message.value = 'Tourist spot saved successfully.';
-  } catch (e) { showError(e); }
+  } catch (e) { showError(e); message.value = partialSaveMessage + message.value; }
   finally { busy.value = false; }
 }
 async function deleteSpot(spot: TouristSpot) {
+  if (busy.value) return;
   if (!window.confirm(`Delete ${spot.name} and all its nearby establishment records?`)) return;
   busy.value = true; message.value = '';
   try {
-    const { error } = await supabase.from('tourist_spots').delete().eq('id', spot.id);
+    const { data, error } = await supabase.from('tourist_spots').delete().eq('id', spot.id).select('id');
     if (error) throw error;
+    if (!data?.length) throw new Error('No destination was deleted. It may already be gone, or your permissions have changed.');
     if (editing.value && form.id === spot.id) startNew();
     await loadSpots(); errorState.value = false; message.value = 'Destination deleted.';
   } catch (e) { showError(e); }
   finally { busy.value = false; }
 }
-async function logout() { await supabase.auth.signOut(); await router.replace('/login'); }
-onMounted(async () => { try { await loadSpots(); } catch (e) { showError(e); } });
+async function logout() {
+  if (busy.value) return;
+  busy.value = true; message.value = '';
+  try {
+    const { error } = await supabase.auth.signOut();
+    spots.value = []; startNew();
+    if (error) throw error;
+    await router.replace('/login');
+  } catch (e) { showError(e); }
+  finally { busy.value = false; }
+}
+onIonViewWillEnter(async () => {
+  if (busy.value) return;
+  busy.value = true; message.value = ''; spots.value = [];
+  try { await loadSpots(); } catch (e) { showError(e); }
+  finally { busy.value = false; }
+});
 </script>

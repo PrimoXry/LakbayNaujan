@@ -13,5 +13,6 @@ export async function getProfile(userId: string): Promise<Profile | null> {
 
 export async function destinationForUser(userId: string): Promise<string> {
   const profile = await getProfile(userId);
-  return profile?.role === 'admin' ? '/admin' : '/tourists';
+  if (!profile) throw new Error('Your account profile could not be found. Please contact support.');
+  return profile.role === 'admin' ? '/admin' : '/tourists';
 }

@@ -19,6 +19,7 @@ import { useRouter } from 'vue-router';
 import { IonPage, IonContent, IonSpinner, IonButton } from '@ionic/vue';
 import { supabase } from '../lib/supabase';
 import { destinationForUser } from '../lib/auth';
+import { errorMessage } from '../lib/errors';
 
 const router = useRouter();
 const loading = ref(true);
@@ -38,11 +39,11 @@ onMounted(async () => {
 
     const { data, error } = await supabase.auth.getUser();
     if (error) throw error;
-    if (!data.user) throw new Error('Google sign-in did not return a user.');
+    if (!data.user) throw new Error('Sign-in did not return a user.');
 
     await router.replace(await destinationForUser(data.user.id));
   } catch (err) {
-    message.value = err instanceof Error ? err.message : 'Could not complete Google sign-in.';
+    message.value = errorMessage(err, 'Could not complete sign-in.');
   } finally {
     loading.value = false;
   }
