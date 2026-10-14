@@ -29,8 +29,8 @@
           <div><div class="field-label">Full description *</div><ion-textarea v-model="form.description" class="field-input" auto-grow :rows="4" required placeholder="History, highlights, travel tips..." /></div>
           <div><div class="field-label">Address / Barangay *</div><ion-input v-model="form.address" class="field-input" required placeholder="Naujan, Oriental Mindoro" /></div>
           <div class="card-grid">
-            <div><div class="field-label">Google Maps latitude (optional)</div><ion-input v-model="form.latitude" class="field-input" type="number" placeholder="13.3..." /></div>
-            <div><div class="field-label">Google Maps longitude (optional)</div><ion-input v-model="form.longitude" class="field-input" type="number" placeholder="121.3..." /></div>
+            <div><div class="field-label">Google Maps latitude (optional)</div><ion-input v-model="form.latitude" class="field-input" type="number" step="any" min="-90" max="90" placeholder="13.3..." /></div>
+            <div><div class="field-label">Google Maps longitude (optional)</div><ion-input v-model="form.longitude" class="field-input" type="number" step="any" min="-180" max="180" placeholder="121.3..." /></div>
           </div>
           <p class="muted" style="font-size:13px;margin:0">For a precise map pin, copy the latitude and longitude of the destination from Google Maps. Otherwise, directions will search using its name and address.</p>
           <div class="row-actions"><ion-button type="button" fill="outline" size="small" @click="previewMap">Preview Google Maps location</ion-button></div>
@@ -63,8 +63,8 @@
             </div>
             <div><div class="field-label">Address / Barangay *</div><ion-input v-model="place.address" class="field-input" placeholder="Address in Naujan" /></div>
             <div class="card-grid">
-              <div><div class="field-label">Latitude</div><ion-input v-model="place.lat" class="field-input" type="number" placeholder="Optional" /></div>
-              <div><div class="field-label">Longitude</div><ion-input v-model="place.lon" class="field-input" type="number" placeholder="Optional" /></div>
+              <div><div class="field-label">Latitude</div><ion-input v-model="place.lat" class="field-input" type="number" step="any" min="-90" max="90" placeholder="Optional" /></div>
+              <div><div class="field-label">Longitude</div><ion-input v-model="place.lon" class="field-input" type="number" step="any" min="-180" max="180" placeholder="Optional" /></div>
             </div>
           </div>
           <ion-button type="button" expand="block" fill="outline" @click="addNearby">+ Add nearby establishment</ion-button>

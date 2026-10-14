@@ -17,6 +17,7 @@
           <ion-button @click="openMaps(mapsDirections(spot))">Get directions</ion-button>
           <ion-button fill="outline" @click="openMaps(mapsSearch(spot))">View on Google Maps</ion-button>
         </div>
+        <WeatherCard :key="spot.id" :spot-name="spot.name" :latitude="spot.latitude" :longitude="spot.longitude" />
         <h2 class="section-heading">✅ Bucket list / Things to do</h2>
         <ion-list v-if="spot.bucket_list.length">
           <ion-item v-for="(activity, i) in spot.bucket_list" :key="i">{{ i+1 }}. {{ activity }}</ion-item>
@@ -44,6 +45,7 @@ import { supabase } from '../lib/supabase';
 import type { TouristSpot, NearbyPlace } from '../lib/types';
 import { mapsDirections, mapsSearch, openMaps } from '../lib/types';
 import { errorMessage } from '../lib/errors';
+import WeatherCard from '../components/WeatherCard.vue';
 const route = useRoute(); const spot = ref<TouristSpot | null>(null); const nearby = ref<NearbyPlace[]>([]); const busy = ref(false); const message = ref('');
 let loadRequest = 0;
 async function load() {
