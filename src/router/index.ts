@@ -5,7 +5,9 @@ import { supabase } from '../lib/supabase';
 import { destinationForUser } from '../lib/auth';
 
 const routes: Array<RouteRecordRaw> = [
-  { path: '/', redirect: '/login' },
+  { path: '/homepage', component: () => import('../views/HomePage.vue') },
+  { path: '/about', component: () => import('../views/AboutUsPage.vue') },
+  { path: '/', redirect: '/homepage' },
   { path: '/login', component: () => import('../views/LoginPage.vue') },
   { path: '/signup', component: () => import('../views/SignupPage.vue') },
   { path: '/verify', component: () => import('../views/VerifyEmailPage.vue') },
