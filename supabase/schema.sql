@@ -94,9 +94,11 @@ create policy "Users can view tourist spots" on public.tourist_spots
   for select to authenticated using (true);
 create policy "Admin can add spots" on public.tourist_spots
   for insert to authenticated with check (public.is_lakbay_admin() and created_by = (select auth.uid()));
+-- Admins manage every destination, including ones created by a previous admin.
+-- Only inserts require created_by to match the current admin.
 create policy "Admin can edit spots" on public.tourist_spots
   for update to authenticated using (public.is_lakbay_admin())
-  with check (public.is_lakbay_admin() and created_by = (select auth.uid()));
+  with check (public.is_lakbay_admin());
 create policy "Admin can delete spots" on public.tourist_spots
   for delete to authenticated using (public.is_lakbay_admin());
 

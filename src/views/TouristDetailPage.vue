@@ -17,6 +17,7 @@
           <ion-button @click="openMaps(mapsDirections(spot))">Get directions</ion-button>
           <ion-button fill="outline" @click="openMaps(mapsSearch(spot))">View on Google Maps</ion-button>
         </div>
+        <WeatherCard :key="spot.id" :spot-name="spot.name" :latitude="spot.latitude" :longitude="spot.longitude" />
         <h2 class="section-heading">✅ Bucket list / Things to do</h2>
         <ion-list v-if="spot.bucket_list.length">
           <ion-item v-for="(activity, i) in spot.bucket_list" :key="i">{{ i+1 }}. {{ activity }}</ion-item>
@@ -43,21 +44,27 @@ import { onIonViewWillEnter, IonPage, IonHeader, IonToolbar, IonTitle, IonButton
 import { supabase } from '../lib/supabase';
 import type { TouristSpot, NearbyPlace } from '../lib/types';
 import { mapsDirections, mapsSearch, openMaps } from '../lib/types';
+import { errorMessage } from '../lib/errors';
+import WeatherCard from '../components/WeatherCard.vue';
 const route = useRoute(); const spot = ref<TouristSpot | null>(null); const nearby = ref<NearbyPlace[]>([]); const busy = ref(false); const message = ref('');
+let loadRequest = 0;
 async function load() {
+  const request = ++loadRequest;
   busy.value = true; message.value = ''; spot.value = null; nearby.value = [];
   try {
     const id = String(route.params.id);
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) throw new Error('This destination link is invalid.');
     const [spotResult, nearbyResult] = await Promise.all([
       supabase.from('tourist_spots').select('*').eq('id', id).maybeSingle(),
       supabase.from('nearby_places').select('*').eq('spot_id', id).order('name'),
     ]);
     if (spotResult.error) throw spotResult.error;
     if (nearbyResult.error) throw nearbyResult.error;
+    if (request !== loadRequest) return;
     spot.value = spotResult.data as TouristSpot | null;
     nearby.value = (nearbyResult.data ?? []) as NearbyPlace[];
-  } catch (e) { message.value = e instanceof Error ? e.message : 'Could not load details.'; }
-  finally { busy.value = false; }
+  } catch (e) { if (request === loadRequest) message.value = errorMessage(e, 'Could not load details.'); }
+  finally { if (request === loadRequest) busy.value = false; }
 }
 onIonViewWillEnter(load);
 </script>

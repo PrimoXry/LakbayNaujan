@@ -1,13 +1,14 @@
 import { createRouter, createWebHistory } from '@ionic/vue-router';
 import type { RouteRecordRaw } from 'vue-router';
+import { isAuthSessionMissingError } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import { destinationForUser } from '../lib/auth';
 
 const routes: Array<RouteRecordRaw> = [
   { path: '/', redirect: '/login' },
   { path: '/login', component: () => import('../views/LoginPage.vue') },
-  { path: '/signup', redirect: '/login' },
-  { path: '/verify', redirect: '/login' },
+  { path: '/signup', component: () => import('../views/SignupPage.vue') },
+  { path: '/verify', component: () => import('../views/VerifyEmailPage.vue') },
   { path: '/auth/callback', component: () => import('../views/GoogleCallbackPage.vue') },
   { path: '/tourists', component: () => import('../views/TouristListPage.vue'), meta: { requiresAuth: true } },
   { path: '/tourists/:id', component: () => import('../views/TouristDetailPage.vue'), meta: { requiresAuth: true } },
@@ -18,10 +19,19 @@ const routes: Array<RouteRecordRaw> = [
 const router = createRouter({ history: createWebHistory(import.meta.env.BASE_URL), routes });
 
 router.beforeEach(async (to) => {
-  // Let the callback view wait for Supabase to finish the OAuth redirect.
-  if (to.path === '/auth/callback') return true;
+  // Public signup/verification pages must remain reachable during an auth outage.
+  if (!to.meta.requiresAuth && to.path !== '/login') return true;
+  if (to.path === '/login' && (to.query.reason === 'session' || to.query.reason === 'profile')) return true;
 
-  const { data: { user } } = await supabase.auth.getUser();
+  let user;
+  try {
+    const result = await supabase.auth.getUser();
+    if (result.error && !isAuthSessionMissingError(result.error)) throw result.error;
+    user = result.data.user;
+  } catch {
+    if (to.path === '/login') return true;
+    return { path: '/login', query: { reason: 'session' } };
+  }
   if (to.meta.requiresAuth && !user) return '/login';
 
   if (to.meta.requiresAdmin) {
@@ -29,7 +39,7 @@ router.beforeEach(async (to) => {
     try {
       if ((await destinationForUser(user.id)) !== '/admin') return '/tourists';
     } catch {
-      return '/tourists';
+      return { path: '/login', query: { reason: 'profile' } };
     }
   }
 
@@ -37,7 +47,7 @@ router.beforeEach(async (to) => {
     try {
       return await destinationForUser(user.id);
     } catch {
-      // Stay on login if profiles table / role lookup needs fixing.
+      return { path: '/login', query: { reason: 'profile' } };
     }
   }
   return true;

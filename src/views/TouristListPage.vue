@@ -1,6 +1,6 @@
 <template>
   <ion-page>
-    <ion-header><ion-toolbar><ion-title>🌿 LakbayNaujan</ion-title><ion-buttons slot="end"><ion-button @click="logout">Logout</ion-button></ion-buttons></ion-toolbar></ion-header>
+    <ion-header><ion-toolbar><ion-title>🌿 LakbayNaujan</ion-title><ion-buttons slot="end"><ion-button :disabled="busy || loggingOut" @click="logout">Logout</ion-button></ion-buttons></ion-toolbar></ion-header>
     <ion-content>
       <div class="page-shell">
         <div class="hero"><small>📍 Naujan, Oriental Mindoro</small><h1>Discover Naujan</h1><p>Explore local destinations and plan what to do.</p></div>
@@ -33,18 +33,33 @@ import { useRouter } from 'vue-router';
 import { onIonViewWillEnter, IonPage, IonHeader, IonToolbar, IonTitle, IonButtons, IonButton, IonContent, IonSearchbar, IonCard, IonCardHeader, IonCardTitle, IonCardSubtitle, IonCardContent } from '@ionic/vue';
 import { supabase } from '../lib/supabase';
 import type { TouristSpot } from '../lib/types';
+import { errorMessage } from '../lib/errors';
 const router = useRouter();
 const search = ref(''); const spots = ref<TouristSpot[]>([]); const busy = ref(false); const message = ref('');
+const loggingOut = ref(false);
+let loadRequest = 0;
 const filtered = computed(() => spots.value.filter(s => `${s.name} ${s.category} ${s.address}`.toLowerCase().includes(search.value.toLowerCase())));
 async function load() {
-  busy.value = true; message.value = '';
+  const request = ++loadRequest;
+  busy.value = true; message.value = ''; spots.value = [];
   try {
     const { data, error } = await supabase.from('tourist_spots').select('*').order('created_at', { ascending: false });
     if (error) throw error;
+    if (request !== loadRequest) return;
     spots.value = (data ?? []) as TouristSpot[];
-  } catch (e) { message.value = e instanceof Error ? e.message : 'Could not load destinations.'; }
-  finally { busy.value = false; }
+  } catch (e) { if (request === loadRequest) message.value = errorMessage(e, 'Could not load destinations.'); }
+  finally { if (request === loadRequest) busy.value = false; }
 }
-async function logout() { await supabase.auth.signOut(); await router.replace('/login'); }
+async function logout() {
+  if (loggingOut.value) return;
+  loggingOut.value = true; message.value = '';
+  try {
+    const { error } = await supabase.auth.signOut();
+    spots.value = [];
+    if (error) throw error;
+    await router.replace('/login');
+  } catch (e) { message.value = errorMessage(e, 'Could not finish logging out. Please try again.'); }
+  finally { loggingOut.value = false; }
+}
 onIonViewWillEnter(load);
 </script>
