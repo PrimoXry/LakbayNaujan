@@ -143,8 +143,8 @@ async function signInWithGoogle() {
 .or-divider { display: flex; align-items: center; gap: 12px; margin: 20px 0; color: #758779; font-size: 12px; }
 .or-divider::before, .or-divider::after { content: ''; flex: 1; height: 1px; background: #dae5dc; }
 .google-button { --border-radius: 12px; --color: #273b2d; --box-shadow: none; height: 48px; text-transform: none; }
-.field-input { --padding-start: 12px; --padding-end: 12px; --padding-top: 10px; --padding-bottom: 10px; color: #000000; font-size: 14px; border-radius: 12px; background: #f5f9f6; }
+.field-input { --padding-start: 12px; --padding-end: 12px; --padding-top: 10px; --padding-bottom: 10px; color: var(--ion-text-color); font-size: 14px; border-radius: 12px; background: var(--app-surface); }
 .google-g { font-size: 20px; color: #4285f4; font-weight: 900; margin-right: 12px; }
 .auth-footer { text-align: center; margin-top: 22px; }
-.auth-footer a { color: #176b45; font-weight: 700; }
+.auth-footer a { color: var(--app-accent); font-weight: 700; }
 </style>

@@ -3,9 +3,8 @@
     <ion-header><ion-toolbar><ion-buttons slot="start"><ion-back-button default-href="/tourists" /></ion-buttons><ion-title>Destination details</ion-title></ion-toolbar></ion-header>
     <ion-content>
       <div class="page-shell" v-if="spot">
-        <img v-if="spot.image_url" class="cover" style="height:250px;border-radius:16px" :src="spot.image_url" :alt="spot.name" />
-        <div v-else class="cover placeholder" style="height:250px;border-radius:16px">🌿</div>
-        <h1 style="color:#19563a">{{ spot.name }}</h1>
+        <SpotImageSlider :key="spot.id" style="height:clamp(250px,45vw,440px);border-radius:16px" :name="spot.name" :image-urls="spot.image_urls" :image-url="spot.image_url" />
+        <h1 style="color:var(--app-heading)">{{ spot.name }}</h1>
         <p class="muted">{{ spot.category }} · 📍 {{ spot.address }}</p>
         <p style="white-space:pre-wrap;line-height:1.65">{{ spot.description }}</p>
         <div v-if="spot.entrance_fee || spot.opening_hours || spot.best_time_to_visit" class="subpanel">
@@ -16,6 +15,7 @@
         <div class="row-actions">
           <ion-button @click="openMaps(mapsDirections(spot))">Get directions</ion-button>
           <ion-button fill="outline" @click="openMaps(mapsSearch(spot))">View on Google Maps</ion-button>
+          <SaveSpotButton :key="spot.id" :spot-id="spot.id" />
         </div>
         <WeatherCard :key="spot.id" :spot-name="spot.name" :latitude="spot.latitude" :longitude="spot.longitude" />
         <h2 class="section-heading">✅ Bucket list / Things to do</h2>
@@ -46,6 +46,8 @@ import type { TouristSpot, NearbyPlace } from '../lib/types';
 import { mapsDirections, mapsSearch, openMaps } from '../lib/types';
 import { errorMessage } from '../lib/errors';
 import WeatherCard from '../components/WeatherCard.vue';
+import SaveSpotButton from '../components/SaveSpotButton.vue';
+import SpotImageSlider from '../components/SpotImageSlider.vue';
 const route = useRoute(); const spot = ref<TouristSpot | null>(null); const nearby = ref<NearbyPlace[]>([]); const busy = ref(false); const message = ref('');
 let loadRequest = 0;
 async function load() {

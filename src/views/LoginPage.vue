@@ -114,5 +114,5 @@ async function signInWithGoogle() {
 .google-button { --border-radius: 12px; --color: #273b2d; --box-shadow: none; height: 48px; text-transform: none; }
 .google-g { font-size: 20px; color: #4285f4; font-weight: 900; margin-right: 12px; }
 .auth-footer { text-align: center; margin-top: 22px; }
-.auth-footer a { color: #176b45; font-weight: 700; }
+.auth-footer a { color: var(--app-accent); font-weight: 700; }
 </style>

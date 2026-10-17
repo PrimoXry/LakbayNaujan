@@ -16,7 +16,7 @@
           </div>
           <p v-if="message" class="feedback" :class="{error: errorState}">{{ message }}</p>
           <div v-for="spot in spots" :key="spot.id" class="row-actions" style="justify-content:space-between;border-bottom:1px solid #e7eee7;padding:10px 0">
-            <div style="min-width:160px;flex:1"><strong>{{ spot.name }}</strong><div class="muted">{{ spot.address }}</div></div>
+            <div style="min-width:160px;flex:1"><strong>{{ spot.name }}</strong><div class="muted">{{ spot.address }}</div><small class="muted">{{ spotImages(spot).length }} saved {{ spotImages(spot).length === 1 ? 'photo' : 'photos' }}</small></div>
             <ion-button size="small" fill="outline" :disabled="busy" @click="editSpot(spot)">Edit</ion-button>
             <ion-button size="small" fill="outline" color="danger" :disabled="busy" @click="deleteSpot(spot)">Delete</ion-button>
           </div>
@@ -40,10 +40,21 @@
           </div>
           <div><div class="field-label">Best time to visit</div><ion-input v-model="form.best_time_to_visit" class="field-input" placeholder="Morning / November–April" /></div>
           <div class="subpanel">
-            <div class="field-label">Tourist photo (JPEG, PNG or WebP, max 5 MB)</div>
-            <input type="file" accept="image/jpeg,image/png,image/webp" @change="pickImage" />
-            <p class="muted" v-if="selectedImage">Selected: {{ selectedImage.name }}</p>
-            <img v-else-if="form.image_url" class="cover" style="max-width:300px;height:150px;border-radius:8px" :src="form.image_url" alt="Current destination photo" />
+            <label for="spot-photos" class="field-label">Tourist photos ({{ photos.length }}/{{ MAX_SPOT_PHOTOS }})</label>
+            <p class="muted">JPEG, PNG or WebP, up to 5 MB each. The first photo is the cover. Swipe through all photos on the destination cards and details.</p>
+            <input id="spot-photos" type="file" multiple accept="image/jpeg,image/png,image/webp" :disabled="busy" @change="pickImages" />
+            <p v-if="photos.some(photo => photo.file)" class="muted">New pictures are selected. Click Save changes or Publish tourist spot to save them to the destination.</p>
+            <div v-if="photos.length" class="photo-drafts">
+              <div v-for="(photo, index) in photos" :key="photo.preview" class="photo-draft">
+                <img :src="photo.preview" :alt="`Destination photo ${index + 1}`" />
+                <p>{{ index === 0 ? 'Cover photo' : `Photo ${index + 1}` }} <span v-if="photo.file">· {{ photo.file.name }}</span></p>
+                <div class="row-actions">
+                  <button type="button" :disabled="busy || index === 0" :aria-label="`Move photo ${index + 1} earlier`" @click="movePhoto(index, -1)">←</button>
+                  <button type="button" :disabled="busy || index === photos.length - 1" :aria-label="`Move photo ${index + 1} later`" @click="movePhoto(index, 1)">→</button>
+                  <button type="button" :disabled="busy" :aria-label="`Remove photo ${index + 1}`" @click="removePhoto(index)">Remove</button>
+                </div>
+              </div>
+            </div>
           </div>
           <div class="subpanel">
             <div class="field-label">✅ Bucket list / Things to do (one activity per line)</div>
@@ -68,6 +79,7 @@
             </div>
           </div>
           <ion-button type="button" expand="block" fill="outline" @click="addNearby">+ Add nearby establishment</ion-button>
+          <p v-if="message" class="feedback form-feedback" :class="{ error: errorState }" :role="errorState ? 'alert' : 'status'">{{ message }}</p>
           <ion-button type="submit" expand="block" :disabled="busy">{{ busy ? 'Saving...' : editing ? 'Save changes' : 'Publish tourist spot' }}</ion-button>
         </form>
       </div>
@@ -75,19 +87,20 @@
   </ion-page>
 </template>
 <script setup lang="ts">
-import { reactive, ref } from 'vue';
+import { onBeforeUnmount, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { onIonViewWillEnter, IonPage, IonHeader, IonToolbar, IonTitle, IonButtons, IonButton, IonContent, IonInput, IonTextarea, IonSelect, IonSelectOption } from '@ionic/vue';
 import { supabase } from '../lib/supabase';
 import type { TouristSpot, NearbyPlace } from '../lib/types';
 import { mapsSearch, openMaps } from '../lib/types';
-import { errorMessage } from '../lib/errors';
+import { errorCode, errorMessage } from '../lib/errors';
+import { MAX_SPOT_PHOTOS, spotImages, uploadSpotPhotos, validateSpotPhotos, type SpotPhotoDraft } from '../lib/spotPhotos';
 
 const router = useRouter();
 const spots = ref<TouristSpot[]>([]); const editing = ref(false); const busy = ref(false);
-const selectedImage = ref<File | null>(null); const message = ref(''); const errorState = ref(false);
+const photos = ref<SpotPhotoDraft[]>([]); const message = ref(''); const errorState = ref(false);
 const form = reactive({ id: '', name: '', category: 'Nature', description: '', address: '', latitude: '', longitude: '',
-  entrance_fee: '', opening_hours: '', best_time_to_visit: '', image_url: '', bucketListText: '' });
+  entrance_fee: '', opening_hours: '', best_time_to_visit: '', bucketListText: '' });
 type StoreDraft = { name: string; kind: 'Carinderia' | 'Sari-sari Store' | 'Other'; address: string; lat: string; lon: string };
 const nearbyDrafts = ref<StoreDraft[]>([]);
 
@@ -100,23 +113,40 @@ function coord(value: unknown, max: number): number | null {
 }
 function addNearby() { nearbyDrafts.value.push({ name: '', kind: 'Carinderia', address: '', lat: '', lon: '' }); }
 function startNew() {
-  editing.value = false; selectedImage.value = null; nearbyDrafts.value = []; message.value = '';
+  editing.value = false; resetPhotos(); nearbyDrafts.value = []; message.value = '';
   Object.assign(form, { id: '', name: '', category: 'Nature', description: '', address: '', latitude: '', longitude: '',
-    entrance_fee: '', opening_hours: '', best_time_to_visit: '', image_url: '', bucketListText: '' });
+    entrance_fee: '', opening_hours: '', best_time_to_visit: '', bucketListText: '' });
 }
 function previewMap() {
   try {
     openMaps(mapsSearch({ name: form.name, address: form.address, latitude: coord(form.latitude, 90), longitude: coord(form.longitude, 180) }));
   } catch (e) { showError(e); }
 }
-function pickImage(e: Event) {
-  const file = (e.target as HTMLInputElement).files?.[0];
-  if (!file) { selectedImage.value = null; return; }
-  if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 5 * 1024 * 1024) {
-    selectedImage.value = null; (e.target as HTMLInputElement).value = '';
-    showError(new Error('Choose a JPEG, PNG or WebP image no larger than 5 MB.')); return;
-  }
-  selectedImage.value = file;
+function resetPhotos(urls: string[] = []) {
+  for (const photo of photos.value) if (photo.file) URL.revokeObjectURL(photo.preview);
+  photos.value = urls.map(preview => ({ preview }));
+}
+function pickImages(e: Event) {
+  const input = e.target as HTMLInputElement;
+  const files = Array.from(input.files ?? []);
+  if (busy.value || !files.length) return;
+  try {
+    validateSpotPhotos(files, photos.value.length);
+    photos.value.push(...files.map(file => ({ file, preview: URL.createObjectURL(file) })));
+    message.value = '';
+  } catch (e) { showError(e); }
+  finally { input.value = ''; }
+}
+function removePhoto(index: number) {
+  if (busy.value) return;
+  const [photo] = photos.value.splice(index, 1);
+  if (photo?.file) URL.revokeObjectURL(photo.preview);
+}
+function movePhoto(index: number, direction: number) {
+  if (busy.value) return;
+  const target = index + direction;
+  if (target < 0 || target >= photos.value.length) return;
+  [photos.value[index], photos.value[target]] = [photos.value[target], photos.value[index]];
 }
 function showError(e: unknown) { errorState.value = true; message.value = errorMessage(e, 'Something went wrong.'); }
 async function loadSpots() {
@@ -131,12 +161,12 @@ async function editSpot(spot: TouristSpot) {
     const { data, error } = await supabase.from('nearby_places').select('*').eq('spot_id', spot.id).order('name');
     if (error) throw error;
     // Only replace the editable form after the related records have loaded.
-    editing.value = true; selectedImage.value = null;
+    editing.value = true; resetPhotos(spotImages(spot));
     Object.assign(form, { id: spot.id, name: spot.name, category: spot.category, description: spot.description,
       address: spot.address, latitude: spot.latitude === null ? '' : String(spot.latitude),
       longitude: spot.longitude === null ? '' : String(spot.longitude),
       entrance_fee: spot.entrance_fee ?? '', opening_hours: spot.opening_hours ?? '',
-      best_time_to_visit: spot.best_time_to_visit ?? '', image_url: spot.image_url ?? '',
+      best_time_to_visit: spot.best_time_to_visit ?? '',
       bucketListText: spot.bucket_list.join('\n') });
     nearbyDrafts.value = ((data ?? []) as NearbyPlace[]).map(p => ({ name: p.name, kind: p.kind,
       address: p.address, lat: p.latitude === null ? '' : String(p.latitude),
@@ -163,31 +193,25 @@ async function save() {
     const payload = { name: form.name.trim(), category: form.category.trim() || 'Nature',
       description: form.description.trim(), address: form.address.trim(), latitude, longitude,
       entrance_fee: form.entrance_fee.trim() || null, opening_hours: form.opening_hours.trim() || null,
-      best_time_to_visit: form.best_time_to_visit.trim() || null, image_url: form.image_url || null,
+      best_time_to_visit: form.best_time_to_visit.trim() || null,
       bucket_list: form.bucketListText.split('\n').map(s => s.trim()).filter(Boolean) };
-    const file = selectedImage.value;
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     if (userError) throw userError;
     if (!user) throw new Error('Please log in again.');
-    if (file) {
-      const ext = file.type === 'image/png' ? 'png' : file.type === 'image/webp' ? 'webp' : 'jpg';
-      const path = `spots/${crypto.randomUUID()}.${ext}`;
-      const { error: uploadError } = await supabase.storage.from('tourist-images').upload(path, file, { contentType: file.type });
-      if (uploadError) throw uploadError;
-      payload.image_url = supabase.storage.from('tourist-images').getPublicUrl(path).data.publicUrl;
-    }
+    const imageUrls = await uploadSpotPhotos(photos.value);
+    const spotPayload = { ...payload, image_urls: imageUrls, image_url: imageUrls[0] ?? null };
     let spotId: string;
     if (editingId) {
-      const { data, error } = await supabase.from('tourist_spots').update(payload).eq('id', editingId).select('id').single();
+      const { data, error } = await supabase.from('tourist_spots').update(spotPayload).eq('id', editingId).select('id').single();
       if (error) throw error;
       spotId = data.id;
     } else {
-      const { data, error } = await supabase.from('tourist_spots').insert({ ...payload, created_by: user.id }).select('id').single();
+      const { data, error } = await supabase.from('tourist_spots').insert({ ...spotPayload, created_by: user.id }).select('id').single();
       if (error) throw error;
       spotId = data.id;
     }
     // A retry must update the row already created, rather than inserting a duplicate.
-    editing.value = true; form.id = spotId; form.image_url = payload.image_url ?? ''; selectedImage.value = null;
+    editing.value = true; form.id = spotId; resetPhotos(imageUrls);
     partialSaveMessage = 'The destination was saved, but nearby places could not be fully updated. Keep this form open and retry. ';
     // MVP synchronization: delete old nearby entries, then insert the new list.
     // If the second request fails, the spot may be saved without all stores; retry the edit.
@@ -201,7 +225,13 @@ async function save() {
     startNew();
     await loadSpots();
     errorState.value = false; message.value = 'Tourist spot saved successfully.';
-  } catch (e) { showError(e); message.value = partialSaveMessage + message.value; }
+  } catch (e) {
+    showError(e);
+    if (['PGRST204', '42703'].includes(errorCode(e))) {
+      message.value = 'Photo gallery setup is incomplete. Run the tourist spot gallery migration in Supabase SQL Editor, then retry.';
+    }
+    message.value = partialSaveMessage + message.value;
+  }
   finally { busy.value = false; }
 }
 async function deleteSpot(spot: TouristSpot) {
@@ -234,4 +264,14 @@ onIonViewWillEnter(async () => {
   try { await loadSpots(); } catch (e) { showError(e); }
   finally { busy.value = false; }
 });
+onBeforeUnmount(() => resetPhotos());
 </script>
+
+<style scoped>
+.photo-drafts { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 14px; margin-top: 16px; }
+.photo-draft { min-width: 0; padding: 10px; border: 1px solid var(--app-border); border-radius: 12px; }
+.photo-draft img { width: 100%; height: 130px; object-fit: cover; border-radius: 8px; }
+.photo-draft p { font-size: 13px; overflow-wrap: anywhere; }
+.photo-draft button { padding: 8px 10px; border: 1px solid var(--app-border); border-radius: 8px; background: var(--app-surface); color: var(--app-heading); cursor: pointer; }
+.photo-draft button:disabled { opacity: .4; cursor: default; }
+</style>

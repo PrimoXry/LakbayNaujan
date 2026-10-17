@@ -76,10 +76,10 @@ onBeforeUnmount(() => { ++requestId; });
 </script>
 
 <style scoped>
-.weather-card { padding: 18px; background: linear-gradient(135deg, #fff, #edf7f1); overflow-wrap: anywhere; }
+.weather-card { padding: 18px; background: linear-gradient(135deg, var(--app-surface), var(--app-soft)); overflow-wrap: anywhere; }
 .weather-card h2 { margin-top: 0; }
-.weather-warning { background: #fff6df; color: #744709; border: 1px solid #e8be6b; border-left: 5px solid #bc7c16; border-radius: 10px; padding: 14px; margin: 16px 0; }
-.weather-warning-severe { background: #fff0ed; color: #852c24; border-color: #e7a199; border-left-color: #b53d31; }
+.weather-warning { background: var(--app-warning-bg); color: var(--app-warning-text); border: 1px solid var(--app-warning-border); border-left-width: 5px; border-radius: 10px; padding: 14px; margin: 16px 0; }
+.weather-warning-severe { background: var(--app-severe-bg); color: var(--app-severe-text); border-color: var(--app-severe-border); }
 .weather-warning h3 { font-size: 17px; font-weight: 750; margin: 0 0 10px; }
 .weather-warning ul { margin: 0; padding-left: 20px; }
 .weather-warning li + li { margin-top: 8px; }
@@ -88,12 +88,12 @@ onBeforeUnmount(() => { ++requestId; });
 .weather-warning a { color: inherit; font-weight: 700; text-underline-offset: 3px; }
 .weather-summary { display: flex; align-items: center; gap: 16px; margin: 16px 0; }
 .weather-icon { font-size: 48px; line-height: 1; }
-.weather-temperature { color: #19563a; font-size: 36px; font-weight: 750; }
+.weather-temperature { color: var(--app-heading); font-size: 36px; font-weight: 750; }
 .weather-temperature span { font-size: 22px; font-weight: 500; }
 .weather-metrics { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin: 20px 0; }
-.weather-metrics dt { color: #66796e; font-size: 13px; }
+.weather-metrics dt { color: var(--app-muted); font-size: 13px; }
 .weather-metrics dd { margin: 4px 0 0; font-weight: 700; }
 .weather-time, .weather-note, .weather-credit { font-size: 13px; line-height: 1.5; margin: 6px 0 0; }
-.weather-credit a { color: #19563a; text-underline-offset: 3px; }
+.weather-credit a { color: var(--app-accent); text-underline-offset: 3px; }
 @media (min-width: 600px) { .weather-metrics { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
 </style>
