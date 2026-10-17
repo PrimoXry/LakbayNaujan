@@ -28,9 +28,13 @@ vi.mock('@ionic/vue', async () => {
     props: { disabled: Boolean, type: { type: String, default: 'button' } },
     setup: (props, { slots }) => () => h('button', { disabled: props.disabled, type: props.type }, slots.default?.()),
   });
+  const modal = defineComponent({
+    props: ['isOpen'],
+    setup: (props, { slots }) => () => props.isOpen ? h('div', { role: 'dialog' }, slots.default?.()) : null,
+  });
   return {
-    ...Object.fromEntries(['IonPage', 'IonHeader', 'IonToolbar', 'IonTitle', 'IonButtons', 'IonContent', 'IonSelect', 'IonSelectOption'].map(name => [name, container])),
-    IonInput: input, IonTextarea: input, IonButton: button,
+    ...Object.fromEntries(['IonPage', 'IonHeader', 'IonToolbar', 'IonTitle', 'IonButtons', 'IonContent', 'IonSelect', 'IonSelectOption', 'IonSplitPane', 'IonMenu', 'IonList', 'IonItem', 'IonLabel', 'IonIcon', 'IonFooter', 'IonMenuButton', 'IonGrid', 'IonRow', 'IonCol', 'IonCard', 'IonCardHeader', 'IonCardSubtitle', 'IonCardTitle', 'IonCardContent', 'IonBadge', 'IonPopover'].map(name => [name, container])),
+    IonInput: input, IonTextarea: input, IonButton: button, IonSearchbar: input, IonModal: modal,
     onIonViewWillEnter: onMounted, onIonViewDidLeave: vi.fn(),
   };
 });
@@ -106,8 +110,15 @@ describe('admin partial saves', () => {
     vi.mocked(supabase.auth.getUser).mockResolvedValue({ data: { user: { id: 'admin-1' } }, error: null } as never);
     wrapper = mount(AdminPage, options);
     await flushPromises();
+    expect(wrapper.find('[role="dialog"]').exists()).toBe(false);
+    await wrapper.get('[aria-label="Search destinations"]').setValue('no matching destination');
+    expect(wrapper.findAll('tbody tr')).toHaveLength(1);
+    expect(wrapper.get('tbody').text()).not.toContain('Test lake');
+    await wrapper.get('[aria-label="Search destinations"]').setValue('lake');
+    expect(wrapper.get('tbody').text()).toContain('Test lake');
     await wrapper.findAll('button').find(button => button.text() === 'Edit')!.trigger('click');
     await flushPromises();
+    expect(wrapper.find('[role="dialog"]').exists()).toBe(true);
     expect(wrapper.get('.photo-draft img').attributes('src')).toBe(storedPhotos[0]);
     const input = wrapper.get('#spot-photos');
     Object.defineProperty(input.element, 'files', { configurable: true, value: [
@@ -126,6 +137,7 @@ describe('admin partial saves', () => {
     expect(payload.image_url).toBe(payload.image_urls[0]);
     expect(bucket.upload).toHaveBeenCalledTimes(2);
     expect(wrapper.text()).toContain('Tourist spot saved successfully');
+    expect(wrapper.find('[role="dialog"]').exists()).toBe(false);
   });
 
   it('retries the existing destination after nearby-place insertion fails', async () => {
@@ -142,6 +154,7 @@ describe('admin partial saves', () => {
     }) as never);
     wrapper = mount(AdminPage, options);
     await flushPromises();
+    await wrapper.get('[aria-label="Add tourist spot"]').trigger('click');
     await wrapper.get('[placeholder="Naujan Lake"]').setValue('Test lake');
     await wrapper.get('[placeholder="History, highlights, travel tips..."]').setValue('Test description');
     await wrapper.get('[placeholder="Naujan, Oriental Mindoro"]').setValue('Test address');
@@ -151,6 +164,7 @@ describe('admin partial saves', () => {
     await wrapper.get('form').trigger('submit');
     await flushPromises();
     expect(wrapper.text()).toContain('The destination was saved, but nearby places could not be fully updated');
+    expect(wrapper.find('[role="dialog"]').exists()).toBe(true);
     await wrapper.get('form').trigger('submit');
     await flushPromises();
     expect(insertSpot).toHaveBeenCalledTimes(1);
