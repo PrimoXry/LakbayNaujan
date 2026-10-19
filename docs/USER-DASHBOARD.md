@@ -50,7 +50,7 @@ See [PostgREST schema cache documentation](https://docs.postgrest.org/en/v14/ref
 - **Saved** (`/tourists?tab=saved`): the signed-in user’s bookmarked destinations.
   Bookmark buttons work on cards and destination detail pages.
 - **Profile** (`/tourists?tab=profile`): edit name and username, change password,
-  upload a picture, switch dark mode, and log out.
+  choose an illustrated avatar or upload a picture, switch dark mode, and log out.
 - The top-right picture opens shortcuts to Profile, Saved spots, and Log out.
   Initials appear until a picture is uploaded or if the image cannot load.
 

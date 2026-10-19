@@ -24,7 +24,7 @@
             <div class="dashboard-page-heading"><div><p class="eyebrow">A LITTLE CLOSER TO NATURE</p><h1>Welcome, {{ displayName }}.</h1><p class="muted">Your next discovery is right here in Naujan.</p></div><span class="location-tag"><ion-icon :icon="locationOutline" aria-hidden="true" /> Oriental Mindoro, PH</span></div>
             <section class="dashboard-hero">
               <div class="hero-copy"><span class="hero-kicker">EXPLORE LOCAL. MAKE MEMORIES.</span><h2>Find a place<br />worth the journey.</h2><p>Quiet lakes, green trails, and local favorites.<br />Start planning your next day out.</p><router-link :to="tabLink('explore')" class="ui-button hero-button">Explore destinations <ion-icon :icon="arrowForwardOutline" aria-hidden="true" /></router-link></div>
-              <div class="hero-art" aria-hidden="true"><img v-if="featuredImage" :src="featuredImage" alt="" /><div v-else class="landscape"><span class="landscape-sun" /><span class="landscape-hill back" /><span class="landscape-hill front" /><span class="landscape-water" /></div></div>
+              <div class="hero-art" aria-hidden="true"><Transition name="hero-photo"><img v-if="featuredImage" :key="featuredImage" :src="featuredImage" alt="" /></Transition><div v-if="!featuredImage" class="landscape"><span class="landscape-sun" /><span class="landscape-hill back" /><span class="landscape-hill front" /><span class="landscape-water" /></div></div>
             </section>
             <section class="overview-stats" aria-label="Quick overview">
               <router-link :to="tabLink('explore')" class="overview-stat"><span class="stat-icon"><ion-icon :icon="compassOutline" aria-hidden="true" /></span><span><strong>{{ spotsMessage ? '—' : spots.length }}</strong><small>Places to explore</small></span><ion-icon :icon="arrowForwardOutline" aria-hidden="true" /></router-link>
@@ -60,7 +60,7 @@
   </ion-page>
 </template>
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { IonPage, IonHeader, IonToolbar, IonContent, IonFooter, IonIcon, IonPopover, onIonViewWillEnter } from '@ionic/vue';
 import { leafOutline, locationOutline, compassOutline, bookmarkOutline, homeOutline, personOutline, searchOutline, arrowForwardOutline, trailSignOutline, logOutOutline } from 'ionicons/icons';
@@ -82,12 +82,13 @@ const tabLink = (value: Tab) => ({ path: '/tourists', query: value === 'home' ? 
 const profile = ref<UserProfile | null>(null); const userId = ref(''); const email = ref(''); const avatar = ref<string | null>(null);
 const passwordLogin = ref(true);
 const spots = ref<TouristSpot[]>([]); const savedIds = ref<string[]>([]); const savedReady = ref(false); const savingIds = ref<string[]>([]);
+const heroImages = ref<string[]>([]); const heroImageIndex = ref(0);
 const search = ref(''); const category = ref(''); const busy = ref(false); const loggingOut = ref(false);
 const accountMessage = ref(''); const spotsMessage = ref(''); const savedMessage = ref(''); const saveMessage = ref('');
 let loadRequest = 0; let avatarRequest = 0; let savedRequest = 0;
 const displayName = computed(() => profile.value?.display_name || profile.value?.username || 'traveler');
 const categories = computed(() => [...new Set(spots.value.map(spot => spot.category))].sort());
-const featuredImage = computed(() => spots.value.map(spot => spotImages(spot)[0]).find(Boolean));
+const featuredImage = computed(() => heroImages.value[heroImageIndex.value] ?? null);
 const visibleSpots = computed(() => {
   if (tab.value === 'home') return spots.value.slice(0, 3);
   if (tab.value === 'saved') return savedIds.value.map(id => spots.value.find(spot => spot.id === id)).filter((spot): spot is TouristSpot => !!spot);
@@ -99,7 +100,17 @@ function clearAccount() {
   ++loadRequest; ++avatarRequest; ++savedRequest;
   profile.value = null; avatar.value = null; userId.value = ''; email.value = ''; savedIds.value = []; savedReady.value = false;
   spots.value = []; savingIds.value = []; search.value = ''; category.value = ''; saveMessage.value = ''; busy.value = false;
+  heroImages.value = []; heroImageIndex.value = 0;
   passwordLogin.value = true;
+}
+function shuffleHeroImages(destinationSpots: TouristSpot[]) {
+  const images = [...new Set(destinationSpots.flatMap(spotImages))];
+  for (let index = images.length - 1; index > 0; index--) {
+    const randomIndex = Math.floor(Math.random() * (index + 1));
+    [images[index], images[randomIndex]] = [images[randomIndex], images[index]];
+  }
+  heroImages.value = images;
+  heroImageIndex.value = 0;
 }
 async function refreshAvatar(value: UserProfile) {
   const request = ++avatarRequest; avatar.value = null;
@@ -133,7 +144,10 @@ async function load() {
     if (request !== loadRequest) return;
     if (profileResult.status === 'fulfilled') { profile.value = profileResult.value; void refreshAvatar(profileResult.value); }
     else accountMessage.value = accountError(profileResult.reason, 'Could not load your profile.');
-    if (spotsResult.status === 'fulfilled' && !spotsResult.value.error) spots.value = (spotsResult.value.data ?? []) as TouristSpot[];
+    if (spotsResult.status === 'fulfilled' && !spotsResult.value.error) {
+      spots.value = (spotsResult.value.data ?? []) as TouristSpot[];
+      shuffleHeroImages(spots.value);
+    }
     else spotsMessage.value = accountError(spotsResult.status === 'rejected' ? spotsResult.reason : spotsResult.value.error, 'Could not load destinations.');
     if (savedResult.status === 'rejected') savedMessage.value = accountError(savedResult.reason, 'Could not load your saved spots.');
   } catch (error) { if (request === loadRequest) accountMessage.value = accountError(error, 'Could not load your account. Please try logging in again.'); }
@@ -161,6 +175,16 @@ const { data: authListener } = supabase.auth.onAuthStateChange((event, session) 
   if (event === 'SIGNED_OUT' || (userId.value && session?.user.id && session.user.id !== userId.value)) clearAccount();
 });
 onIonViewWillEnter(load);
-onBeforeUnmount(() => { clearAccount(); authListener.subscription.unsubscribe(); });
+let heroImageTimer: ReturnType<typeof setInterval> | undefined;
+onMounted(() => {
+  heroImageTimer = setInterval(() => {
+    if (tab.value !== 'home' || document.hidden || heroImages.value.length < 2) return;
+    heroImageIndex.value = (heroImageIndex.value + 1) % heroImages.value.length;
+  }, 3000);
+});
+onBeforeUnmount(() => {
+  if (heroImageTimer) clearInterval(heroImageTimer);
+  clearAccount(); authListener.subscription.unsubscribe();
+});
 </script>
 <style src="../theme/dashboard.css" scoped></style>

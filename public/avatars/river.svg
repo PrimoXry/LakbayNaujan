@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <defs><clipPath id="circle"><circle cx="128" cy="128" r="124"/></clipPath><linearGradient id="bg" x2="1" y2="1"><stop stop-color="#ffe2c6"/><stop offset="1" stop-color="#f2a982"/></linearGradient></defs>
+  <g clip-path="url(#circle)"><circle cx="128" cy="128" r="124" fill="url(#bg)"/><circle cx="204" cy="50" r="24" fill="#fff6d7" opacity=".85"/>
+    <path d="M35 260c7-58 42-88 93-88s86 30 93 88" fill="#d47443"/><path d="M108 151h40v38h-40z" fill="#603b32"/>
+    <ellipse cx="128" cy="108" rx="48" ry="58" fill="#603b32"/><path d="M79 94c-2-42 17-66 50-66 30 0 49 22 48 59-14-7-23-18-29-31-16 14-39 25-69 27z" fill="#171c21"/>
+    <circle cx="111" cy="108" r="3.5" fill="#1a1717"/><circle cx="146" cy="108" r="3.5" fill="#1a1717"/><path d="M116 132q12 10 24 0" fill="none" stroke="#3b211e" stroke-width="4" stroke-linecap="round"/>
+  </g><circle cx="128" cy="128" r="122" fill="none" stroke="#ffffff" stroke-opacity=".8" stroke-width="5"/>
+</svg>

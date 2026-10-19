@@ -1,7 +1,7 @@
 <template>
   <article class="destination-card">
     <div class="destination-image">
-      <SpotImageSlider :name="spot.name" :image-urls="spot.image_urls" :image-url="spot.image_url" />
+      <SpotImageSlider :name="spot.name" :image-urls="spot.image_urls" :image-url="spot.image_url" :auto-play="true" />
       <span class="destination-category">{{ spot.category }}</span>
       <button type="button" class="bookmark-button" :disabled="saving || saveDisabled" :aria-pressed="saved"
         :aria-label="`${saved ? 'Unsave' : 'Save'} ${spot.name}`" @click="$emit('toggle-save', spot)">

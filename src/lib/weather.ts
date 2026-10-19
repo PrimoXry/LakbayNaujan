@@ -8,6 +8,16 @@ export type CurrentWeather = {
   windSpeed: number | null;
   weatherCode: number | null;
   isDay: boolean | null;
+  forecast?: DailyWeatherForecast[];
+};
+
+export type DailyWeatherForecast = {
+  time: number;
+  date: string;
+  high: number | null;
+  low: number | null;
+  weatherCode: number | null;
+  precipitationProbability: number | null;
 };
 
 const CACHE_MS = 15 * 60 * 1000;
@@ -27,10 +37,20 @@ function measurement(value: unknown): number | null {
   return typeof value === 'number' && Number.isFinite(value) ? value : null;
 }
 
+const localDateFormatter = new Intl.DateTimeFormat('en-CA', {
+  timeZone: 'Asia/Manila', year: 'numeric', month: '2-digit', day: '2-digit',
+});
+
+function localDateKey(timestamp: number): string {
+  const parts = Object.fromEntries(localDateFormatter.formatToParts(new Date(timestamp * 1000)).map(part => [part.type, part.value]));
+  return `${parts.year}-${parts.month}-${parts.day}`;
+}
+
 async function requestWeather(latitude: number, longitude: number): Promise<CurrentWeather> {
   const params = new URLSearchParams({
     latitude: String(latitude), longitude: String(longitude),
     current: 'temperature_2m,apparent_temperature,relative_humidity_2m,precipitation,weather_code,wind_speed_10m,is_day',
+    daily: 'weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max', forecast_days: '4',
     temperature_unit: 'celsius', wind_speed_unit: 'kmh', precipitation_unit: 'mm',
     timezone: 'Asia/Manila', timeformat: 'unixtime',
   });
@@ -53,14 +73,15 @@ async function requestWeather(latitude: number, longitude: number): Promise<Curr
     let body: unknown;
     try { body = await response.json(); }
     catch { throw new Error('The weather service returned incomplete data. Please try again later.'); }
-    const current = record(record(body).current);
+    const responseBody = record(body);
+    const current = record(responseBody.current);
     const time = measurement(current.time);
     if (time === null || !Number.isFinite(new Date(time * 1000).getTime())
       || !['temperature_2m', 'weather_code', 'relative_humidity_2m', 'precipitation', 'wind_speed_10m']
         .some(key => measurement(current[key]) !== null)) {
       throw new Error('Weather data is unavailable for this location. Please try again later.');
     }
-    return {
+    const result: CurrentWeather = {
       time,
       temperature: measurement(current.temperature_2m),
       feelsLike: measurement(current.apparent_temperature),
@@ -70,6 +91,25 @@ async function requestWeather(latitude: number, longitude: number): Promise<Curr
       weatherCode: measurement(current.weather_code),
       isDay: current.is_day === 1 ? true : current.is_day === 0 ? false : null,
     };
+    const daily = record(responseBody.daily);
+    const dailyTimes = Array.isArray(daily.time) ? daily.time : [];
+    const today = localDateKey(time);
+    const forecast = dailyTimes.flatMap((value, index): DailyWeatherForecast[] => {
+      const forecastTime = measurement(value);
+      if (forecastTime === null) return [];
+      const date = localDateKey(forecastTime);
+      if (date <= today) return [];
+      return [{
+        time: forecastTime,
+        date,
+        high: measurement(Array.isArray(daily.temperature_2m_max) ? daily.temperature_2m_max[index] : null),
+        low: measurement(Array.isArray(daily.temperature_2m_min) ? daily.temperature_2m_min[index] : null),
+        weatherCode: measurement(Array.isArray(daily.weather_code) ? daily.weather_code[index] : null),
+        precipitationProbability: measurement(Array.isArray(daily.precipitation_probability_max) ? daily.precipitation_probability_max[index] : null),
+      }];
+    }).slice(0, 3);
+    if (forecast.length) result.forecast = forecast;
+    return result;
   } finally { clearTimeout(timeout); }
 }
 

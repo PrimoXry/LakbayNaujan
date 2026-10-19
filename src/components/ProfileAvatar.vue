@@ -14,5 +14,5 @@ watch(() => props.src, () => { failed.value = false; });
 <style scoped>
 .profile-avatar { display: inline-grid; place-items: center; flex-shrink: 0; width: 40px; height: 40px; border-radius: 50%; overflow: hidden; background: var(--app-soft); color: var(--app-accent); border: 2px solid var(--app-border); font-size: 15px; font-weight: 800; }
 .profile-avatar img { width: 100%; height: 100%; object-fit: cover; }
-.profile-avatar-large { width: 88px; height: 88px; font-size: 28px; }
+.profile-avatar-large { width: 132px; height: 132px; font-size: 40px; }
 </style>

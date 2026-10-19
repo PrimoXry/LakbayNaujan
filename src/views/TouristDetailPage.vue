@@ -2,7 +2,8 @@
   <ion-page>
     <ion-header><ion-toolbar><ion-buttons slot="start"><ion-back-button default-href="/tourists" /></ion-buttons><ion-title>Destination details</ion-title></ion-toolbar></ion-header>
     <ion-content>
-      <div class="page-shell" v-if="spot">
+      <Transition name="destination-details" mode="out-in">
+      <div v-if="spot" :key="spot.id" class="page-shell">
         <SpotImageSlider :key="spot.id" style="height:clamp(250px,45vw,440px);border-radius:16px" :name="spot.name" :image-urls="spot.image_urls" :image-url="spot.image_url" />
         <h1 style="color:var(--app-heading)">{{ spot.name }}</h1>
         <p class="muted">{{ spot.category }} · 📍 {{ spot.address }}</p>
@@ -17,10 +18,10 @@
           <ion-button fill="outline" @click="openMaps(mapsSearch(spot))">View on Google Maps</ion-button>
           <SaveSpotButton :key="spot.id" :spot-id="spot.id" />
         </div>
-        <WeatherCard :key="spot.id" :spot-name="spot.name" :latitude="spot.latitude" :longitude="spot.longitude" />
+        <WeatherCard :key="spot.id" :spot-name="spot.name" :category="spot.category" :latitude="spot.latitude" :longitude="spot.longitude" />
         <h2 class="section-heading">✅ Bucket list / Things to do</h2>
         <ion-list v-if="spot.bucket_list.length">
-          <ion-item v-for="(activity, i) in spot.bucket_list" :key="i">{{ i+1 }}. {{ activity }}</ion-item>
+          <ion-item v-for="(activity, i) in spot.bucket_list" :key="i">{{ i + 1 }}. {{ activity }}</ion-item>
         </ion-list>
         <p v-else class="muted">No suggested activities listed yet.</p>
         <h2 class="section-heading">🍲 Nearby carinderias & sari-sari stores</h2>
@@ -33,7 +34,8 @@
         </ion-card>
         <p v-if="!nearby.length" class="muted">No nearby establishments added yet.</p>
       </div>
-      <div v-else class="page-shell"><p v-if="busy">Loading destination...</p><p v-else class="feedback error">{{ message || 'Destination not found.' }}</p></div>
+      <div v-else key="destination-loading" class="page-shell"><p v-if="busy">Loading destination...</p><p v-else class="feedback error">{{ message || 'Destination not found.' }}</p></div>
+      </Transition>
     </ion-content>
   </ion-page>
 </template>
@@ -70,3 +72,26 @@ async function load() {
 }
 onIonViewWillEnter(load);
 </script>
+<style scoped>
+.destination-details-enter-active,
+.destination-details-leave-active {
+  transition: opacity 240ms ease, transform 240ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.destination-details-enter-from {
+  opacity: 0;
+  transform: translateY(14px);
+}
+
+.destination-details-leave-to {
+  opacity: 0;
+  transform: translateY(-6px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .destination-details-enter-active,
+  .destination-details-leave-active {
+    transition: none;
+  }
+}
+</style>

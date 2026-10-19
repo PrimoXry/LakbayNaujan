@@ -4,6 +4,28 @@ import type { Profile } from './types';
 
 export type UserProfile = Profile & { display_name: string | null; avatar_path: string | null };
 const AVATAR_BUCKET = 'profile-avatars';
+export const AVATAR_PRESETS = [
+  { id: 'fern', label: 'Fern' },
+  { id: 'luna', label: 'Luna' },
+  { id: 'kai', label: 'Kai' },
+  { id: 'sage', label: 'Sage' },
+  { id: 'river', label: 'River' },
+  { id: 'amara', label: 'Amara' },
+] as const;
+export type AvatarPresetId = typeof AVATAR_PRESETS[number]['id'];
+
+export function avatarPresetFromPath(path: string | null): AvatarPresetId | null {
+  const id = path?.match(/\/preset\/([^/]+)$/)?.[1];
+  return AVATAR_PRESETS.find(preset => preset.id === id)?.id ?? null;
+}
+
+export function avatarPresetUrl(preset: AvatarPresetId): string {
+  return `${import.meta.env.BASE_URL}avatars/${preset}.svg`;
+}
+
+function isUploadedAvatar(profile: UserProfile, path: string | null): path is string {
+  return !!path && path.startsWith(`${profile.id}/`) && avatarPresetFromPath(path) === null;
+}
 
 export function accountError(error: unknown, fallback: string): string {
   const code = errorCode(error);
@@ -39,6 +61,8 @@ export async function savePersonalProfile(userId: string, name: string, username
 
 export async function avatarUrl(path: string | null): Promise<string | null> {
   if (!path) return null;
+  const preset = avatarPresetFromPath(path);
+  if (preset) return avatarPresetUrl(preset);
   const { data, error } = await supabase.storage.from(AVATAR_BUCKET).createSignedUrl(path, 3600);
   if (error) throw error;
   return data.signedUrl;
@@ -64,9 +88,21 @@ export async function uploadAvatar(profile: UserProfile, file: File): Promise<Us
     await bucket.remove([path]).catch(() => undefined);
     throw error;
   }
-  if (profile.avatar_path && profile.avatar_path.startsWith(`${profile.id}/`)) {
+  if (isUploadedAvatar(profile, profile.avatar_path)) {
     // A cleanup failure must not turn a successful profile save into a failed save.
     await bucket.remove([profile.avatar_path]).catch(() => undefined);
+  }
+  return data as UserProfile;
+}
+
+export async function saveAvatarPreset(profile: UserProfile, preset: AvatarPresetId): Promise<UserProfile> {
+  if (!AVATAR_PRESETS.some(option => option.id === preset)) throw new Error('Choose one of the available avatar stickers.');
+  const path = `${profile.id}/preset/${preset}`;
+  const { data, error } = await supabase.from('profiles').update({ avatar_path: path })
+    .eq('id', profile.id).select('*').single();
+  if (error) throw error;
+  if (isUploadedAvatar(profile, profile.avatar_path)) {
+    await supabase.storage.from(AVATAR_BUCKET).remove([profile.avatar_path]).catch(() => undefined);
   }
   return data as UserProfile;
 }

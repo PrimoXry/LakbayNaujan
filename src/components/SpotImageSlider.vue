@@ -1,6 +1,8 @@
 <template>
   <section class="photo-slider" role="region" aria-roledescription="carousel" :aria-label="`${name} photos`"
-    tabindex="0" @keydown.left.prevent="goTo(active - 1)" @keydown.right.prevent="goTo(active + 1)">
+    tabindex="0" @keydown.left.prevent="goTo(active - 1)" @keydown.right.prevent="goTo(active + 1)"
+    @mouseenter="isHovered = true" @mouseleave="isHovered = false"
+    @focusin="isFocused = true" @focusout="isFocused = false">
     <div v-if="images.length" ref="track" class="photo-track" @scroll.passive="onScroll">
       <div v-for="(url, index) in images" :key="url" class="photo-slide" role="group" aria-roledescription="slide"
         :aria-label="`${index + 1} of ${images.length}`" :aria-hidden="active !== index">
@@ -23,27 +25,56 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { spotImages } from '../lib/spotPhotos';
-const props = defineProps<{ name: string; imageUrls?: string[]; imageUrl?: string | null }>();
+const props = defineProps<{ name: string; imageUrls?: string[]; imageUrl?: string | null; autoPlay?: boolean }>();
 const images = computed(() => spotImages({ image_urls: props.imageUrls, image_url: props.imageUrl }));
 const track = ref<HTMLElement | null>(null);
 const active = ref(0);
 const failed = ref<string[]>([]);
+const isHovered = ref(false);
+const isFocused = ref(false);
+let autoPlayTimer: ReturnType<typeof setInterval> | undefined;
+let isMounted = false;
+
 function goTo(index: number) {
   if (!images.value.length) return;
   active.value = (index + images.value.length) % images.value.length;
   const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
   track.value?.scrollTo({ left: active.value * track.value.clientWidth, behavior: reducedMotion ? 'auto' : 'smooth' });
 }
+
+function startAutoPlay() {
+  if (autoPlayTimer) clearInterval(autoPlayTimer);
+  autoPlayTimer = undefined;
+  if (!isMounted || !props.autoPlay || images.value.length < 2 || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+
+  autoPlayTimer = setInterval(() => {
+    if (document.hidden || isHovered.value || isFocused.value) return;
+    goTo(active.value + 1);
+  }, 2000);
+}
+
 function onScroll() {
   if (!track.value?.clientWidth) return;
   active.value = Math.max(0, Math.min(images.value.length - 1, Math.round(track.value.scrollLeft / track.value.clientWidth)));
 }
+
 watch(images, () => {
   active.value = 0; failed.value = [];
   if (track.value) track.value.scrollLeft = 0;
 }, { flush: 'post' });
+watch(() => [props.autoPlay, images.value.length], startAutoPlay);
+
+onMounted(() => {
+  isMounted = true;
+  startAutoPlay();
+});
+
+onBeforeUnmount(() => {
+  isMounted = false;
+  if (autoPlayTimer) clearInterval(autoPlayTimer);
+});
 </script>
 
 <style scoped>
