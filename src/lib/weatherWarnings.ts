@@ -11,9 +11,10 @@ export type WeatherWarning = {
 const WIND_CAUTION_KMH = 40;
 const WIND_WARNING_KMH = 60;
 
-export function weatherWarnings(weather: Pick<CurrentWeather, 'weatherCode' | 'windSpeed'> | null): WeatherWarning[] {
+export function weatherWarnings(weather: Pick<CurrentWeather, 'weatherCode' | 'windSpeed'> | null, category?: string): WeatherWarning[] {
   if (!weather) return [];
   const warnings: WeatherWarning[] = [];
+  const showNatureRainAdvisory = category === undefined || category.trim().toLowerCase() === 'nature';
   const code = weather.weatherCode;
   if (code !== null) {
     if ([95, 96, 97, 99].includes(code)) {
@@ -21,15 +22,15 @@ export function weatherWarnings(weather: Pick<CurrentWeather, 'weatherCode' | 'w
         id: 'conditions', severity: 'warning', title: 'Thunderstorms',
         message: 'Thunderstorms are indicated near this destination. Consider postponing outdoor activities.',
       });
-    } else if ([65, 82].includes(code)) {
+    } else if ([65, 82].includes(code) && showNatureRainAdvisory) {
       warnings.push({
         id: 'conditions', severity: 'warning', title: 'Heavy rain',
-        message: 'Heavy rain or intense showers are indicated. Travel and outdoor plans may be disrupted.',
+        message: 'Heavy rain or intense showers are indicated near this nature destination. Outdoor paths and waterside areas may be slippery or hazardous; consider postponing the visit.',
       });
-    } else if ([51, 53, 55, 61, 63, 80, 81].includes(code)) {
+    } else if ([51, 53, 55, 61, 63, 80, 81].includes(code) && showNatureRainAdvisory) {
       warnings.push({
         id: 'conditions', severity: 'caution', title: 'Rain or drizzle',
-        message: 'Rain or drizzle is indicated. Plan for wet paths and changing conditions.',
+        message: 'Rain is falling near this nature destination. Paths, rocks and outdoor areas may be slippery; bring rain protection and use extra care.',
       });
     } else if ([45, 48].includes(code)) {
       warnings.push({

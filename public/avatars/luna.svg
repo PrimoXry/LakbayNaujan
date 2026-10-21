@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <defs><clipPath id="circle"><circle cx="128" cy="128" r="124"/></clipPath><linearGradient id="bg" x2="1" y2="1"><stop stop-color="#fce1e9"/><stop offset="1" stop-color="#c7d9ff"/></linearGradient></defs>
+  <g clip-path="url(#circle)"><circle cx="128" cy="128" r="124" fill="url(#bg)"/><circle cx="204" cy="50" r="24" fill="#fff" opacity=".8"/>
+    <path d="M34 260c7-58 43-88 94-88s87 30 94 88" fill="#7152a5"/><path d="M108 151h40v38h-40z" fill="#edbd9d"/>
+    <path d="M67 118c-13-57 7-93 61-93s74 36 61 93l-6 55-21-19H92l-20 19z" fill="#332947"/>
+    <ellipse cx="128" cy="108" rx="48" ry="58" fill="#edbd9d"/><path d="M80 91c1-39 20-61 51-61 28 0 45 16 49 48-19 1-33-11-44-27-12 18-31 31-56 40z" fill="#332947"/>
+    <circle cx="111" cy="108" r="3.5" fill="#30283a"/><circle cx="146" cy="108" r="3.5" fill="#30283a"/><path d="M116 132q12 10 24 0" fill="none" stroke="#a55768" stroke-width="4" stroke-linecap="round"/>
+  </g><circle cx="128" cy="128" r="122" fill="none" stroke="#ffffff" stroke-opacity=".8" stroke-width="5"/>
+</svg>

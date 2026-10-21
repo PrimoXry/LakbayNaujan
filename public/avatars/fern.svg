@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <defs><clipPath id="circle"><circle cx="128" cy="128" r="124"/></clipPath><linearGradient id="bg" x2="1" y2="1"><stop stop-color="#d7f4d7"/><stop offset="1" stop-color="#72c8b1"/></linearGradient></defs>
+  <g clip-path="url(#circle)"><circle cx="128" cy="128" r="124" fill="url(#bg)"/><circle cx="207" cy="52" r="24" fill="#fff2bd" opacity=".8"/>
+    <path d="M35 260c7-58 42-88 93-88s86 30 93 88" fill="#167f74"/><path d="M108 151h40v37h-40z" fill="#8d5140"/>
+    <path d="M68 93c-4-41 22-70 60-70s64 29 60 70l-8 39c-5 27-25 46-52 46s-47-19-52-46z" fill="#38231f"/>
+    <circle cx="73" cy="70" r="23" fill="#38231f"/><circle cx="93" cy="43" r="23" fill="#38231f"/><circle cx="124" cy="34" r="24" fill="#38231f"/><circle cx="156" cy="39" r="23" fill="#38231f"/><circle cx="179" cy="65" r="23" fill="#38231f"/>
+    <ellipse cx="128" cy="108" rx="48" ry="58" fill="#8d5140"/><path d="M79 91c5-35 24-52 49-52 29 0 44 16 49 45-16-4-27-17-35-29-14 18-37 29-63 36z" fill="#38231f"/>
+    <circle cx="111" cy="108" r="3.5" fill="#2c1b1a"/><circle cx="146" cy="108" r="3.5" fill="#2c1b1a"/><path d="M116 132q12 10 24 0" fill="none" stroke="#542d2c" stroke-width="4" stroke-linecap="round"/>
+  </g><circle cx="128" cy="128" r="122" fill="none" stroke="#ffffff" stroke-opacity=".8" stroke-width="5"/>
+</svg>

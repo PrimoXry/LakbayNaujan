@@ -9,6 +9,7 @@ export type TouristSpot = {
   latitude: number | null;
   longitude: number | null;
   image_url: string | null;
+  image_urls?: string[];
   entrance_fee: string | null;
   opening_hours: string | null;
   best_time_to_visit: string | null;
