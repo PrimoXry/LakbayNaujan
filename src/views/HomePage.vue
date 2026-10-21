@@ -50,6 +50,8 @@ function goToAbout() {
 .landing-content {
   --background: transparent;
   position: relative;
+  width: 100%;
+  height: 100%;
 }
 
 /* Full-screen background */
@@ -81,14 +83,17 @@ function goToAbout() {
   display: flex;
   justify-content: flex-end;
   align-items: center;
+  flex-wrap: wrap;
   gap: 14px;
 
   padding: 24px 40px;
+  box-sizing: border-box;
 }
 
 /* Navigation buttons */
 .nav-button {
   min-width: 105px;
+  min-height: 44px;
   padding: 12px 24px;
 
   border: 2px solid white;
@@ -101,6 +106,7 @@ function goToAbout() {
   font-weight: 700;
   letter-spacing: 0.5px;
 
+  white-space: nowrap;
   cursor: pointer;
 
   transition:
@@ -115,6 +121,11 @@ function goToAbout() {
   transform: translateY(-2px);
 }
 
+.nav-button:focus-visible {
+  outline: 3px solid white;
+  outline-offset: 3px;
+}
+
 /* Center the logo */
 .home-screen {
   position: absolute;
@@ -125,19 +136,24 @@ function goToAbout() {
   justify-content: center;
   align-items: center;
 
-  padding: 70px 20px 20px;
+  width: 100%;
+  min-height: 100%;
+  padding: 85px 24px 24px;
+  box-sizing: border-box;
+
   pointer-events: none;
 }
 
-/* Large centered logo */
+/* Responsive centered logo */
 .main-logo {
   display: block;
 
-  width: clamp(180px, 155vw, 800px);
-  max-width: 110vw;
-  max-height: 98vh;
-
+  width: min(80vw, 800px);
+  max-width: 100%;
+  max-height: 75vh;
+  max-height: 75dvh;
   height: auto;
+
   object-fit: contain;
 
   filter: drop-shadow(
@@ -164,24 +180,110 @@ ion-content.landing-content::part(scroll) {
   overflow: hidden;
 }
 
+/* Tablets */
+@media (min-width: 601px) and (max-width: 1024px) {
+  .top-nav {
+    padding: 22px 28px;
+    gap: 12px;
+  }
+
+  .nav-button {
+    min-width: 100px;
+    padding: 11px 20px;
+    font-size: 14px;
+  }
+
+  .home-screen {
+    padding: 80px 28px 24px;
+  }
+
+  .main-logo {
+    width: min(84vw, 700px);
+    max-height: 72vh;
+    max-height: 72dvh;
+  }
+}
+
 /* Mobile layout */
 @media (max-width: 600px) {
   .top-nav {
-    padding: 18px 16px;
+    padding: 16px;
     gap: 8px;
   }
 
   .nav-button {
-    min-width: 88px;
-    padding: 10px 16px;
+    min-width: 0;
+    min-height: 42px;
+    padding: 9px 15px;
     font-size: 13px;
+    letter-spacing: 0.2px;
+  }
+
+  .home-screen {
+    padding: 75px 16px 20px;
   }
 
   .main-logo {
     width: 90vw;
+    max-width: 100%;
     max-height: 65vh;
+    max-height: 65dvh;
+  }
+}
+
+/* Small mobile screens */
+@media (max-width: 380px) {
+  .top-nav {
+    padding: 12px;
+    gap: 7px;
   }
 
-  
+  .nav-button {
+    padding: 8px 12px;
+    font-size: 12px;
+  }
+
+  .home-screen {
+    padding: 68px 12px 16px;
+  }
+
+  .main-logo {
+    width: 94vw;
+    max-height: 60vh;
+    max-height: 60dvh;
+  }
+}
+
+/* Landscape phones and short screens */
+@media (max-height: 500px) and (orientation: landscape) {
+  .top-nav {
+    padding: 10px 16px;
+  }
+
+  .nav-button {
+    min-height: 38px;
+    padding: 7px 14px;
+  }
+
+  .home-screen {
+    padding: 58px 16px 12px;
+  }
+
+  .main-logo {
+    width: min(65vw, 600px);
+    max-height: 75vh;
+    max-height: 75dvh;
+  }
+}
+
+/* Respect reduced-motion settings */
+@media (prefers-reduced-motion: reduce) {
+  .main-logo {
+    animation: none;
+  }
+
+  .nav-button {
+    transition: none;
+  }
 }
 </style>

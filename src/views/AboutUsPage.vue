@@ -1,4 +1,4 @@
-```vue
+
 <template>
   <ion-page>
     <ion-content :fullscreen="true" class="about-content">
@@ -118,17 +118,26 @@ function goHome() {
   position: relative;
 }
 
+.about-content::part(scroll) {
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 /* BACKGROUND IMAGE */
 .background-layer {
   position: fixed;
   inset: 0;
   z-index: 0;
+  pointer-events: none;
+
   background-image:
     linear-gradient(
       rgba(0, 0, 0, 0.35),
       rgba(0, 0, 0, 0.45)
     ),
     url('/images/background.jpg');
+
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
@@ -138,11 +147,16 @@ function goHome() {
 .page-content {
   position: relative;
   z-index: 1;
-  width: 100%;
-  min-height: 100%;
+
   display: flex;
   flex-direction: column;
   align-items: center;
+
+  width: 100%;
+  min-height: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
+
   padding: 55px 20px 28px;
   box-sizing: border-box;
 }
@@ -150,18 +164,25 @@ function goHome() {
 /* ABOUT CARD */
 .about-card {
   position: relative;
+
   width: 100%;
   max-width: 760px;
+  min-width: 0;
   margin: 0 auto;
+
   padding: 36px 42px 24px;
   box-sizing: border-box;
+
   border: 1px solid rgba(255, 255, 255, 0.55);
   border-radius: 22px;
+
   background: rgba(255, 255, 255, 0.97);
   box-shadow: 0 12px 35px rgba(0, 0, 0, 0.22);
+
   color: #333333;
   text-align: left;
-  overflow: hidden;
+
+  overflow-wrap: anywhere;
 }
 
 /* BACK BUTTON */
@@ -169,15 +190,28 @@ function goHome() {
   position: absolute;
   top: 18px;
   left: 18px;
-  width: 42px;
-  height: 42px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 44px;
+  height: 44px;
+  padding: 0;
+
   border: none;
   border-radius: 50%;
+
   background: #edf5ed;
   color: #285c35;
+
   font-size: 20px;
   cursor: pointer;
-  transition: background 0.2s ease, transform 0.2s ease;
+  touch-action: manipulation;
+
+  transition:
+    background 0.2s ease,
+    transform 0.2s ease;
 }
 
 .back-button:hover {
@@ -185,49 +219,69 @@ function goHome() {
   transform: translateX(-2px);
 }
 
+.back-button:focus-visible {
+  outline: 2px solid #285c35;
+  outline-offset: 3px;
+}
+
 /* LOGO */
 .card-logo {
   display: block;
+
   width: min(100%, 400px);
-  height: 300px;
-  margin: -12px auto -18px;
+  height: 180px;
+  max-width: 100%;
+
+  margin: -12px auto -8px;
+
   object-fit: contain;
+  object-position: center;
 }
 
 /* MAIN HEADING */
 .about-card h2 {
   margin: 0 0 18px;
+
   color: #285c35;
   font-size: clamp(24px, 4vw, 32px);
   font-weight: 800;
+  line-height: 1.3;
   text-align: center;
+  overflow-wrap: anywhere;
 }
+
 /* SECTION HEADINGS */
 .about-card h3 {
   margin: 28px 0 12px;
+
   color: #347344;
   font-size: 20px;
   font-weight: 700;
+  line-height: 1.4;
   text-align: left;
+  overflow-wrap: anywhere;
 }
 
 /* PARAGRAPHS */
 .about-card p {
   margin: 0 0 12px;
   max-width: 620px;
+
   color: #555555;
   font-size: 15px;
   line-height: 1.8;
   text-align: left;
+  overflow-wrap: anywhere;
 }
 
 .about-card strong {
   color: #333333;
 }
 
-/* CONTACT SECTION - MOVED SLIGHTLY UP */
+/* CONTACT SECTION */
 .contact-section {
   margin-top: 10px;
+  min-width: 0;
 }
 
 .contact-section h3 {
@@ -240,6 +294,7 @@ function goHome() {
   color: #347344;
   text-decoration: none;
   overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .about-card a:hover {
@@ -249,13 +304,19 @@ function goHome() {
 /* FEATURES LIST */
 .about-card ul {
   display: block;
+
+  width: 100%;
   max-width: 580px;
   margin: 0;
   padding-left: 24px;
+  box-sizing: border-box;
+
   color: #555555;
   text-align: left;
   line-height: 1.9;
   font-size: 15px;
+
+  overflow-wrap: anywhere;
 }
 
 .about-card li {
@@ -269,16 +330,16 @@ function goHome() {
 
 /* DEVELOPERS SECTION */
 .developers-section {
-  margin-top: 10px;
-  margin-bottom: 10px;
-  margin-left: -42px;
-  margin-right: -42px;
+  margin: 10px -42px 10px;
   padding: 22px 42px 26px;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 /* DEVELOPERS HEADING */
 .developers-section h3 {
   margin: 0 0 10px;
+
   color: #347344;
   font-size: 20px;
   font-weight: 700;
@@ -293,18 +354,23 @@ function goHome() {
 /* LIGHT GREEN NAME BOX */
 .developers-list {
   width: 100%;
+  min-width: 0;
   margin: 0;
   padding: 14px 20px;
+  box-sizing: border-box;
+
   background: #edf6e9;
   border: 1px solid #e0ecd9;
   border-radius: 10px;
-  box-sizing: border-box;
+
   text-align: left;
+  overflow-wrap: anywhere;
 }
 
 /* DEVELOPER NAMES */
 .developers-list p {
   margin: 6px 0;
+
   color: #385c40;
   font-size: 14px;
   font-weight: 500;
@@ -316,25 +382,34 @@ function goHome() {
 .page-footer {
   position: relative;
   z-index: 1;
+
+  width: 100%;
   margin-top: 22px;
+  padding: 0 8px;
+  box-sizing: border-box;
+
   color: #ffffff;
   font-size: 12px;
+  line-height: 1.6;
   text-align: center;
   text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+
+  overflow-wrap: anywhere;
 }
 
-/* TABLET */
+/* TABLETS AND SMALL LAPTOPS */
 @media (max-width: 768px) {
   .page-content {
     padding: 40px 16px 24px;
   }
 
   .about-card {
-    padding: 34px 26px 24px;
+    max-width: 680px;
+    padding: 32px 26px 24px;
   }
 
   .card-logo {
-    height: 90px;
+    height: 150px;
   }
 
   .developers-section {
@@ -344,31 +419,34 @@ function goHome() {
   }
 }
 
-/* MOBILE */
+/* MOBILE PHONES */
 @media (max-width: 480px) {
   .page-content {
-    padding: 30px 12px 20px;
+    padding: 24px 12px 20px;
   }
 
   .about-card {
-    padding: 64px 20px 24px;
+    padding: 60px 20px 24px;
     border-radius: 16px;
   }
 
   .back-button {
-    top: 14px;
-    left: 14px;
-    width: 38px;
-    height: 38px;
+    top: 12px;
+    left: 12px;
+    width: 42px;
+    height: 42px;
     font-size: 18px;
   }
 
   .card-logo {
-    height: 80px;
+    width: 100%;
+    height: 110px;
+    margin: 0 auto 12px;
   }
 
   .about-card h2 {
-    font-size: 25px;
+    margin-bottom: 16px;
+    font-size: clamp(22px, 6vw, 25px);
   }
 
   .about-card h3 {
@@ -376,13 +454,18 @@ function goHome() {
     font-size: 18px;
   }
 
-  .contact-section h3 {
-    margin-top: 10px;
-  }
-
   .about-card p,
   .about-card ul {
     font-size: 14px;
+    line-height: 1.75;
+  }
+
+  .about-card ul {
+    padding-left: 21px;
+  }
+
+  .contact-section h3 {
+    margin-top: 10px;
   }
 
   .developers-section {
@@ -402,6 +485,74 @@ function goHome() {
   .developers-list p {
     font-size: 14px;
   }
+
+  .page-footer {
+    margin-top: 16px;
+    font-size: 11px;
+  }
+}
+
+/* EXTRA SMALL PHONES */
+@media (max-width: 360px) {
+  .page-content {
+    padding: 18px 8px 16px;
+  }
+
+  .about-card {
+    padding: 58px 15px 20px;
+    border-radius: 14px;
+  }
+
+  .back-button {
+    top: 10px;
+    left: 10px;
+    width: 40px;
+    height: 40px;
+  }
+
+  .card-logo {
+    height: 95px;
+  }
+
+  .about-card h2 {
+    font-size: 22px;
+  }
+
+  .about-card h3 {
+    font-size: 17px;
+  }
+
+  .developers-section {
+    margin-left: -15px;
+    margin-right: -15px;
+    padding: 18px 15px 20px;
+  }
+
+  .developers-list {
+    padding: 12px;
+  }
+}
+
+/* LANDSCAPE PHONES */
+@media (max-height: 500px) and (orientation: landscape) {
+  .page-content {
+    padding-top: 20px;
+  }
+
+  .about-card {
+    padding-top: 56px;
+  }
+
+  .card-logo {
+    height: 90px;
+    margin-top: 0;
+  }
+}
+
+/* REDUCED MOTION */
+@media (prefers-reduced-motion: reduce) {
+  .back-button {
+    transition: none;
+  }
 }
 </style>
-```
