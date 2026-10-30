@@ -19,6 +19,10 @@
           <SaveSpotButton :key="spot.id" :spot-id="spot.id" />
         </div>
         <WeatherCard :key="spot.id" :spot-name="spot.name" :category="spot.category" :latitude="spot.latitude" :longitude="spot.longitude" />
+        <section class="reviews-panel">
+          <div class="reviews-heading"><div><h2 class="section-heading">Visitor reviews</h2><p v-if="reviews.length" class="muted">★ {{ reviewAverage }} · {{ reviews.length }} {{ reviews.length === 1 ? 'review' : 'reviews' }}</p><p v-else class="muted">Be the first to share your experience.</p></div><router-link to="/itinerary" class="ui-button ui-button-secondary">Plan a trip</router-link></div>
+          <article v-for="review in reviews" :key="review.id" class="review-card"><div class="review-stars">{{ '★'.repeat(review.rating) }}<span>{{ '★'.repeat(5 - review.rating) }}</span></div><p v-if="review.comment">“{{ review.comment }}”</p><small class="muted">{{ new Date(review.created_at).toLocaleDateString() }}</small></article>
+        </section>
         <h2 class="section-heading">✅ Bucket list / Things to do</h2>
         <ion-list v-if="spot.bucket_list.length">
           <ion-item v-for="(activity, i) in spot.bucket_list" :key="i">{{ i + 1 }}. {{ activity }}</ion-item>
@@ -40,7 +44,7 @@
   </ion-page>
 </template>
 <script setup lang="ts">
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import { useRoute } from 'vue-router';
 import { onIonViewWillEnter, IonPage, IonHeader, IonToolbar, IonTitle, IonButtons, IonBackButton, IonContent, IonButton, IonList, IonItem, IonCard, IonCardHeader, IonCardTitle, IonCardSubtitle, IonCardContent } from '@ionic/vue';
 import { supabase } from '../lib/supabase';
@@ -50,7 +54,9 @@ import { errorMessage } from '../lib/errors';
 import WeatherCard from '../components/WeatherCard.vue';
 import SaveSpotButton from '../components/SaveSpotButton.vue';
 import SpotImageSlider from '../components/SpotImageSlider.vue';
-const route = useRoute(); const spot = ref<TouristSpot | null>(null); const nearby = ref<NearbyPlace[]>([]); const busy = ref(false); const message = ref('');
+import { loadReviews, type Review } from '../lib/itinerary';
+const route = useRoute(); const spot = ref<TouristSpot | null>(null); const nearby = ref<NearbyPlace[]>([]); const reviews = ref<Review[]>([]); const busy = ref(false); const message = ref('');
+const reviewAverage = computed(() => reviews.value.length ? (reviews.value.reduce((sum, review) => sum + review.rating, 0) / reviews.value.length).toFixed(1) : '0.0');
 let loadRequest = 0;
 async function load() {
   const request = ++loadRequest;
@@ -58,15 +64,17 @@ async function load() {
   try {
     const id = String(route.params.id);
     if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) throw new Error('This destination link is invalid.');
-    const [spotResult, nearbyResult] = await Promise.all([
+    const [spotResult, nearbyResult, reviewsResult] = await Promise.all([
       supabase.from('tourist_spots').select('*').eq('id', id).maybeSingle(),
       supabase.from('nearby_places').select('*').eq('spot_id', id).order('name'),
+      loadReviews(id),
     ]);
     if (spotResult.error) throw spotResult.error;
     if (nearbyResult.error) throw nearbyResult.error;
     if (request !== loadRequest) return;
     spot.value = spotResult.data as TouristSpot | null;
     nearby.value = (nearbyResult.data ?? []) as NearbyPlace[];
+    reviews.value = reviewsResult;
   } catch (e) { if (request === loadRequest) message.value = errorMessage(e, 'Could not load details.'); }
   finally { if (request === loadRequest) busy.value = false; }
 }
@@ -94,4 +102,7 @@ onIonViewWillEnter(load);
     transition: none;
   }
 }
+</style>
+<style scoped>
+.reviews-panel{margin-top:24px}.reviews-heading{display:flex;justify-content:space-between;align-items:center;gap:12px}.reviews-heading .section-heading{margin-bottom:4px}.review-card{border-top:1px solid var(--app-border);padding:14px 0}.review-card p{line-height:1.55;margin:6px 0}.review-stars{color:#c78919;font-size:18px}.review-stars span{color:#d7ded9}
 </style>

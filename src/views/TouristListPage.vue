@@ -63,7 +63,7 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { IonPage, IonHeader, IonToolbar, IonContent, IonFooter, IonIcon, IonPopover, onIonViewWillEnter } from '@ionic/vue';
-import { leafOutline, locationOutline, compassOutline, bookmarkOutline, homeOutline, personOutline, searchOutline, arrowForwardOutline, trailSignOutline, logOutOutline } from 'ionicons/icons';
+import { leafOutline, locationOutline, compassOutline, bookmarkOutline, homeOutline, personOutline, searchOutline, arrowForwardOutline, trailSignOutline, logOutOutline, listOutline } from 'ionicons/icons';
 import ProfileAvatar from '../components/ProfileAvatar.vue';
 import ProfileSettings from '../components/ProfileSettings.vue';
 import DestinationCard from '../components/DestinationCard.vue';
@@ -71,14 +71,14 @@ import { supabase } from '../lib/supabase';
 import { accountError, avatarUrl, loadUserProfile, loadSavedSpots, setSpotSaved, type UserProfile } from '../lib/userAccount';
 import type { TouristSpot } from '../lib/types';
 import { spotImages } from '../lib/spotPhotos';
-type Tab = 'home' | 'explore' | 'saved' | 'profile';
+type Tab = 'home' | 'explore' | 'itinerary' | 'saved' | 'profile';
 const navigation: { id: Tab; label: string; icon: string }[] = [
   { id: 'home', label: 'Home', icon: homeOutline }, { id: 'explore', label: 'Explore', icon: compassOutline },
-  { id: 'saved', label: 'Saved', icon: bookmarkOutline }, { id: 'profile', label: 'Profile', icon: personOutline },
+  { id: 'itinerary', label: 'Plan trip', icon: listOutline }, { id: 'saved', label: 'Saved', icon: bookmarkOutline }, { id: 'profile', label: 'Profile', icon: personOutline },
 ];
 const router = useRouter(); const route = useRoute();
 const tab = computed<Tab>(() => ['explore', 'saved', 'profile'].includes(String(route.query.tab)) ? route.query.tab as Tab : 'home');
-const tabLink = (value: Tab) => ({ path: '/tourists', query: value === 'home' ? {} : { tab: value } });
+const tabLink = (value: Tab) => value === 'itinerary' ? { path: '/itinerary' } : ({ path: '/tourists', query: value === 'home' ? {} : { tab: value } });
 const profile = ref<UserProfile | null>(null); const userId = ref(''); const email = ref(''); const avatar = ref<string | null>(null);
 const passwordLogin = ref(true);
 const spots = ref<TouristSpot[]>([]); const savedIds = ref<string[]>([]); const savedReady = ref(false); const savingIds = ref<string[]>([]);

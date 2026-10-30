@@ -16,6 +16,7 @@ export type TouristSpot = {
   bucket_list: string[];
   created_by: string;
   created_at: string;
+  weather_suitability?: string[];
 };
 
 export type NearbyPlace = {

@@ -14,6 +14,7 @@ const routes: Array<RouteRecordRaw> = [
   { path: '/auth/callback', component: () => import('../views/GoogleCallbackPage.vue') },
   { path: '/tourists', component: () => import('../views/TouristListPage.vue'), meta: { requiresAuth: true } },
   { path: '/tourists/:id', component: () => import('../views/TouristDetailPage.vue'), meta: { requiresAuth: true } },
+  { path: '/itinerary', component: () => import('../views/ItineraryBuilderPage.vue'), meta: { requiresAuth: true } },
   { path: '/admin', component: () => import('../views/AdminPage.vue'), meta: { requiresAuth: true, requiresAdmin: true } },
   { path: '/:pathMatch(.*)*', redirect: '/login' },
 ];

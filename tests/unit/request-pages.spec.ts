@@ -69,7 +69,7 @@ describe('signup and verification screens', () => {
     wrapper = mount(VerifyEmailPage, options);
     expect(supabase.auth.resend).not.toHaveBeenCalled();
     vi.mocked(supabase.auth.resend).mockResolvedValue({ data: { user: null, session: null }, error: { code: 'email_address_not_authorized' } } as never);
-    await wrapper.findAll('button').find(button => button.text() === 'Resend code')!.trigger('click');
+    await wrapper.get('.resend-button').trigger('click');
     await flushPromises();
     expect(wrapper.text()).toContain('Email delivery is not enabled for this address');
     expect(wrapper.text()).not.toContain('Request accepted');
@@ -101,7 +101,9 @@ describe('admin partial saves', () => {
     vi.mocked(supabase.from).mockImplementation(((table: string) => table === 'tourist_spots' ? {
       select: () => ({ order: async () => ({ data: [spot], error: null }) }), update: updateSpot,
     } : {
-      select: () => ({ eq: () => ({ order: async () => ({ data: [], error: null }) }) }),
+      select: (columns: string) => columns === 'id'
+        ? { eq: async () => ({ count: 3, error: null }) }
+        : { eq: () => ({ order: async () => ({ data: [], error: null }) }) },
       delete: () => ({ eq: async () => ({ error: null }) }),
     }) as never);
     const bucket = { upload: vi.fn().mockResolvedValue({ error: null }),
@@ -110,6 +112,7 @@ describe('admin partial saves', () => {
     vi.mocked(supabase.auth.getUser).mockResolvedValue({ data: { user: { id: 'admin-1' } }, error: null } as never);
     wrapper = mount(AdminPage, options);
     await flushPromises();
+    expect(wrapper.get('#midbox2 .stat-value').text()).toBe('3');
     expect(wrapper.find('[role="dialog"]').exists()).toBe(false);
     await wrapper.get('[aria-label="Search destinations"]').setValue('no matching destination');
     expect(wrapper.findAll('tbody tr')).toHaveLength(1);
