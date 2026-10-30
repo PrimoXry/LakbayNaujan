@@ -26,6 +26,10 @@
               <ion-icon slot="start" :icon="addCircleOutline"></ion-icon>
               <ion-label>Add New Spot</ion-label>
             </ion-item>
+            <ion-item class="menu-item" button :disabled="busy" @click="openUserDashboard">
+              <ion-icon slot="start" :icon="arrowForwardOutline"></ion-icon>
+              <ion-label>Application Ui2</ion-label>
+            </ion-item>
           </ion-list>
         </ion-content>
 
@@ -246,7 +250,7 @@
 import { computed, onBeforeUnmount, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { onIonViewWillEnter, IonPage, IonHeader, IonToolbar, IonTitle, IonButtons, IonButton, IonContent, IonInput, IonTextarea, IonSelect, IonSelectOption, IonSplitPane, IonMenu, IonList, IonItem, IonLabel, IonIcon, IonFooter, IonMenuButton, IonSearchbar, IonModal, IonPopover } from '@ionic/vue';
-import { gridOutline, addCircleOutline, logOutOutline, addOutline, chevronUpOutline, closeOutline } from 'ionicons/icons';
+import { gridOutline, addCircleOutline, arrowForwardOutline, logOutOutline, addOutline, chevronUpOutline, closeOutline } from 'ionicons/icons';
 import { supabase } from '../lib/supabase';
 import type { TouristSpot, NearbyPlace } from '../lib/types';
 import { mapsSearch, openMaps } from '../lib/types';
@@ -276,6 +280,7 @@ function openAddModal() {
   startNew(); isModalOpen.value = true;
 }
 function closeModal() { if (!busy.value) isModalOpen.value = false; }
+async function openUserDashboard() { if (!busy.value) await router.push('/tourists'); }
 async function canDismissModal() { return !busy.value || !isModalOpen.value; }
 function presentPopover(event: Event) { popoverEvent.value = event; isPopoverOpen.value = true; }
 async function handleLogout() { isPopoverOpen.value = false; await logout(); }

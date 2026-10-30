@@ -42,7 +42,7 @@
             <div class="dashboard-page-heading"><div><p class="eyebrow">KEEP THE PLACES YOU LOVE</p><h1>Saved spots</h1><p class="muted">A little inspiration for your next adventure.</p></div><router-link :to="tabLink('explore')" class="ui-button ui-button-secondary">Explore more</router-link></div>
           </template>
           <template v-else>
-            <div class="dashboard-page-heading"><div><p class="eyebrow">YOUR LAKBAYNAUJAN</p><h1>Profile & settings</h1><p class="muted">Your details, your preferences, your way.</p></div><router-link :to="tabLink('saved')" class="ui-button ui-button-secondary"><ion-icon :icon="bookmarkOutline" aria-hidden="true" /> Saved spots</router-link></div>
+            <div class="dashboard-page-heading"><div><p class="eyebrow">YOUR LAKBAYNAUJAN</p><h1>Profile & settings</h1><p class="muted">Your details, your preferences, your way.</p></div><div class="profile-page-actions"><router-link v-if="profile?.role === 'admin'" to="/admin" class="ui-button ui-button-secondary">Back to Admin Dashboard</router-link><router-link :to="tabLink('saved')" class="ui-button ui-button-secondary"><ion-icon :icon="bookmarkOutline" aria-hidden="true" /> Saved spots</router-link></div></div>
             <ProfileSettings v-if="profile" :key="profile.id" :profile="profile" :email="email" :avatar="avatar" :logging-out="loggingOut" :password-login="passwordLogin" @updated="profileUpdated" @logout="logout" />
             <div v-else class="dashboard-empty"><h2>We couldn’t load your profile.</h2><button type="button" class="ui-button" @click="load">Try again</button></div>
           </template>

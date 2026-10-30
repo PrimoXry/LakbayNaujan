@@ -12,6 +12,7 @@
 .profile-menu a, .profile-menu button { display: flex; align-items: center; gap: 10px; width: 100%; padding: 14px; border: 0; text-decoration: none; color: var(--ion-text-color); background: transparent; font-size: 14px; cursor: pointer; text-align: left; }
 .dashboard-shell { max-width: 1120px; padding: 28px 24px 40px; margin: auto; }
 .dashboard-page-heading { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; margin-bottom: 24px; }
+.profile-page-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; }
 .eyebrow { font-size: 10px; letter-spacing: 1.8px; color: var(--app-accent); font-weight: 800; margin: 0 0 10px; }
 .dashboard-page-heading h1 { color: var(--app-heading); font-size: clamp(26px, 4vw, 34px); letter-spacing: -.8px; font-weight: 800; margin: 0 0 8px; overflow-wrap: anywhere; }
 .dashboard-page-heading .muted { font-size: 14px; margin: 0; }
