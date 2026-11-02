@@ -54,9 +54,14 @@ function downloadPdf(title: string, subtitle: string, lines: string[], filename:
   let pdf = '%PDF-1.4\n'; const offsets: number[] = [0]; objects.forEach((object, index) => { offsets.push(pdf.length); pdf += `${index + 1} 0 obj\n${object}\nendobj\n`; }); const xref = pdf.length; pdf += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`; offsets.slice(1).forEach(offset => { pdf += `${String(offset).padStart(10, '0')} 00000 n \n`; }); pdf += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`;
   const blob = new Blob([pdf], { type: 'application/pdf' }); const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; link.download = filename; link.click(); URL.revokeObjectURL(url);
 }
-export function downloadItineraryPdf(itinerary: Itinerary, spots: TouristSpot[]) {
-  const lines = [`Total destinations: ${itinerary.items.length}`]; itinerary.items.forEach((item, index) => { const spot = spots.find(value => value.id === item.spot_id) ?? item.spot; if (spot) { lines.push(`${item.visited ? '[x]' : '[ ]'} ${index + 1}. ${spot.name} - ${spot.category}`); lines.push(`    ${spot.address} - ${spot.description.slice(0, 85)}`); } }); downloadPdf('My Travel Itinerary', `Generated ${new Date().toLocaleDateString()} - ${itinerary.title}`, lines, 'Lakbay-Naujan-My-Itinerary.pdf');
+export function downloadItineraryPdf(itinerary: Itinerary, spots: TouristSpot[], bucketList: TouristSpot[] = []) {
+  const lines = [`Total destinations: ${itinerary.items.length}`];
+  const addSpotWithActivities = (spot: TouristSpot, prefix: string) => { lines.push(`${prefix} ${spot.name} - ${spot.category}`); lines.push(`    ${spot.address} - ${spot.description.slice(0, 85)}`); if (spot.bucket_list.length) { lines.push('    Things to do:'); spot.bucket_list.forEach(activity => lines.push(`    [ ] ${activity}`)); } };
+  itinerary.items.forEach((item, index) => { const spot = spots.find(value => value.id === item.spot_id) ?? item.spot; if (spot) addSpotWithActivities(spot, `${item.visited ? '[x]' : '[ ]'} ${index + 1}.`); });
+  const additionalBucketSpots = bucketList.filter(spot => !itinerary.items.some(item => item.spot_id === spot.id));
+  if (additionalBucketSpots.length) { lines.push(''); lines.push('SAVED BUCKET LIST'); additionalBucketSpots.forEach(spot => addSpotWithActivities(spot, '[ ]')); }
+  downloadPdf('My Travel Itinerary', `Generated ${new Date().toLocaleDateString()} - ${itinerary.title}`, lines, 'Lakbay-Naujan-My-Itinerary.pdf');
 }
 export function downloadMasterChecklist(spots: TouristSpot[]) {
-  const lines: string[] = []; [...new Set(spots.map(spot => spot.category))].sort().forEach(category => { lines.push(category); spots.filter(spot => spot.category === category).forEach(spot => lines.push(`[ ] ${spot.name} - ${spot.address}`)); }); downloadPdf('Complete Destination Checklist', `All published destinations - Generated ${new Date().toLocaleDateString()}`, lines, 'Lakbay-Naujan-Complete-Checklist.pdf');
+  const lines: string[] = []; [...new Set(spots.map(spot => spot.category))].sort().forEach(category => { lines.push(category); spots.filter(spot => spot.category === category).forEach(spot => { lines.push(`[ ] ${spot.name} - ${spot.address}`); if (spot.bucket_list.length) spot.bucket_list.forEach(activity => lines.push(`    [ ] ${activity}`)); }); }); downloadPdf('Complete Destination Checklist', `All published destinations - Generated ${new Date().toLocaleDateString()}`, lines, 'Lakbay-Naujan-Complete-Checklist.pdf');
 }

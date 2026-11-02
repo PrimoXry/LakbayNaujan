@@ -50,7 +50,7 @@
             <p v-if="spotsMessage" class="feedback error" role="alert">{{ spotsMessage }} <button type="button" class="inline-retry" @click="load">Retry</button></p>
             <p v-if="savedMessage" class="feedback error" role="alert">{{ savedMessage }} <button type="button" class="inline-retry" @click="reloadSaved">Retry saved spots</button></p>
             <p v-if="saveMessage" class="feedback error" role="alert">{{ saveMessage }}</p>
-            <div class="destination-grid"><DestinationCard v-for="spot in visibleSpots" :key="spot.id" :spot="spot" :saved="savedIds.includes(spot.id)" :saving="savingIds.includes(spot.id)" :save-disabled="!savedReady || !userId || loggingOut" @toggle-save="toggleSave" /></div>
+            <div class="destination-grid"><DestinationCard v-for="spot in visibleSpots" :key="spot.id" :spot="spot" :rating="ratings[spot.id]" :saved="savedIds.includes(spot.id)" :saving="savingIds.includes(spot.id)" :save-disabled="!savedReady || !userId || loggingOut" @toggle-save="toggleSave" /></div>
             <div v-if="!visibleSpots.length && !spotsMessage && !(tab === 'saved' && savedMessage)" class="dashboard-empty"><ion-icon :icon="tab === 'saved' ? bookmarkOutline : compassOutline" aria-hidden="true" /><h2>{{ tab === 'saved' ? 'Your next adventure starts with a save.' : 'No destinations found.' }}</h2><p class="muted">{{ tab === 'saved' ? 'Tap the bookmark on a destination to keep it here.' : tab === 'explore' && (search || category) ? 'Try another search or category.' : 'New places will appear here as they are added.' }}</p><router-link v-if="tab === 'saved'" :to="tabLink('explore')" class="ui-button">Explore destinations</router-link></div>
           </template>
         </template>
@@ -82,6 +82,8 @@ const tabLink = (value: Tab) => value === 'itinerary' ? { path: '/itinerary' } :
 const profile = ref<UserProfile | null>(null); const userId = ref(''); const email = ref(''); const avatar = ref<string | null>(null);
 const passwordLogin = ref(true);
 const spots = ref<TouristSpot[]>([]); const savedIds = ref<string[]>([]); const savedReady = ref(false); const savingIds = ref<string[]>([]);
+type SpotRating = { average: number; count: number };
+const ratings = ref<Record<string, SpotRating>>({});
 const heroImages = ref<string[]>([]); const heroImageIndex = ref(0);
 const search = ref(''); const category = ref(''); const busy = ref(false); const loggingOut = ref(false);
 const accountMessage = ref(''); const spotsMessage = ref(''); const savedMessage = ref(''); const saveMessage = ref('');
@@ -100,6 +102,7 @@ function clearAccount() {
   ++loadRequest; ++avatarRequest; ++savedRequest;
   profile.value = null; avatar.value = null; userId.value = ''; email.value = ''; savedIds.value = []; savedReady.value = false;
   spots.value = []; savingIds.value = []; search.value = ''; category.value = ''; saveMessage.value = ''; busy.value = false;
+  ratings.value = {};
   heroImages.value = []; heroImageIndex.value = 0;
   passwordLogin.value = true;
 }
@@ -138,8 +141,8 @@ async function load() {
     if (!data.user) { await router.replace('/login'); return; }
     userId.value = data.user.id; email.value = data.user.email ?? '';
     passwordLogin.value = data.user.app_metadata?.provider !== 'google' || data.user.app_metadata?.providers?.includes('email') === true;
-    const [profileResult, spotsResult, savedResult] = await Promise.allSettled([
-      loadUserProfile(data.user.id), supabase.from('tourist_spots').select('*').order('created_at', { ascending: false }), reloadSaved(),
+    const [profileResult, spotsResult, savedResult, ratingsResult] = await Promise.allSettled([
+      loadUserProfile(data.user.id), supabase.from('tourist_spots').select('*').order('created_at', { ascending: false }), reloadSaved(), supabase.from('reviews').select('tourist_spot_id, rating'),
     ]);
     if (request !== loadRequest) return;
     if (profileResult.status === 'fulfilled') { profile.value = profileResult.value; void refreshAvatar(profileResult.value); }
@@ -150,6 +153,16 @@ async function load() {
     }
     else spotsMessage.value = accountError(spotsResult.status === 'rejected' ? spotsResult.reason : spotsResult.value.error, 'Could not load destinations.');
     if (savedResult.status === 'rejected') savedMessage.value = accountError(savedResult.reason, 'Could not load your saved spots.');
+    if (ratingsResult.status === 'fulfilled' && !ratingsResult.value.error) {
+      const reviewTotals = (ratingsResult.value.data ?? []).reduce((map, review) => {
+        const current = map[review.tourist_spot_id] ?? { total: 0, count: 0 };
+        current.total += review.rating;
+        current.count += 1;
+        map[review.tourist_spot_id] = current;
+        return map;
+      }, {} as Record<string, { total: number; count: number }>);
+      ratings.value = Object.fromEntries(Object.entries(reviewTotals).map(([id, value]) => [id, { average: value.total / value.count, count: value.count }]));
+    }
   } catch (error) { if (request === loadRequest) accountMessage.value = accountError(error, 'Could not load your account. Please try logging in again.'); }
   finally { if (request === loadRequest) busy.value = false; }
 }
