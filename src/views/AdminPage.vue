@@ -26,6 +26,10 @@
               <ion-icon slot="start" :icon="addCircleOutline"></ion-icon>
               <ion-label>Add New Spot</ion-label>
             </ion-item>
+            <ion-item class="menu-item" button :disabled="busy" @click="scrollToUsers">
+              <ion-icon slot="start" :icon="peopleOutline"></ion-icon>
+              <ion-label>Manage Users</ion-label>
+            </ion-item>
             <ion-item class="menu-item" button :disabled="busy" @click="openUserDashboard">
               <ion-icon slot="start" :icon="arrowForwardOutline"></ion-icon>
               <ion-label>Application Ui2</ion-label>
@@ -162,6 +166,34 @@
                 </div>
             </section>
 
+            <section id="userboard" class="userboard" aria-labelledby="userboard-heading">
+              <header class="userboard-header">
+                <div>
+                  <h2 id="userboard-heading">User Accounts</h2>
+                  <p>Create, update, and remove traveler accounts.</p>
+                </div>
+                <ion-button color="success" class="add-spot-btn" aria-label="Add user" :disabled="busy" @click="openAddUser">
+                  <ion-icon slot="start" :icon="personAddOutline"></ion-icon>
+                  ADD USER
+                </ion-button>
+              </header>
+              <ion-searchbar v-model="userSearchQuery" class="user-search" placeholder="Search users..." aria-label="Search users" :debounce="150"></ion-searchbar>
+              <p v-if="userMessage" class="feedback user-feedback" :class="{ error: userError }" :role="userError ? 'alert' : 'status'">{{ userMessage }}</p>
+              <div class="table-responsive">
+                <div class="custom-admin-table user-table" role="table" aria-label="User accounts">
+                  <div class="user-table-row user-table-header" role="row"><div role="columnheader">USER</div><div role="columnheader">EMAIL</div><div role="columnheader">ROLE</div><div role="columnheader">CREATED</div><div role="columnheader">ACTIONS</div></div>
+                  <div v-for="user in filteredUsers" :key="user.id" class="user-table-row" role="row">
+                    <div role="cell"><div class="user-cell"><span class="user-initials" aria-hidden="true">{{ userInitials(user) }}</span><div><strong>{{ user.display_name || user.username }}</strong><small>@{{ user.username }}</small></div></div></div>
+                    <div role="cell">{{ user.email }}</div>
+                    <div role="cell"><span class="user-role" :class="{ admin: user.role === 'admin' }">{{ user.role === 'admin' ? 'Administrator' : 'Traveler' }}</span></div>
+                    <div role="cell"><span>{{ formatUserDate(user.created_at) }}</span><small class="user-status">{{ user.email_confirmed_at ? 'Verified' : 'Unverified' }}</small></div>
+                    <div role="cell"><div class="table-actions"><ion-button size="small" fill="outline" color="success" :disabled="busy" @click="openEditUser(user)">Edit</ion-button><ion-button size="small" fill="outline" color="danger" :disabled="busy" @click="deleteUser(user)">Delete</ion-button></div></div>
+                  </div>
+                  <div v-if="!filteredUsers.length" class="user-table-row user-empty-row" role="row"><div role="cell">{{ busy && !users.length ? 'Loading users…' : 'No users found.' }}</div></div>
+                </div>
+              </div>
+            </section>
+
           </div>
         </ion-content>
       </div>
@@ -242,6 +274,27 @@
         </ion-content>
       </ion-modal>
 
+      <ion-modal class="admin-light-theme" :is-open="userModalOpen" :can-dismiss="canDismissUserModal" @didDismiss="userModalOpen = false">
+        <ion-header>
+          <ion-toolbar color="success">
+            <ion-title>{{ editingUser ? 'Edit User' : 'Add User' }}</ion-title>
+            <ion-buttons slot="end"><ion-button @click="closeUserModal" :disabled="busy" aria-label="Close user form" class="modal-x-close-btn"><ion-icon :icon="closeOutline" style="font-size: 22px;"></ion-icon></ion-button></ion-buttons>
+          </ion-toolbar>
+        </ion-header>
+        <ion-content class="ion-padding">
+          <form @submit.prevent="saveUser" class="stack">
+            <div><div class="field-label">Email address *</div><ion-input v-model="userForm.email" class="field-input" type="email" required placeholder="traveler@example.com" /></div>
+            <div><div class="field-label">Username *</div><ion-input v-model="userForm.username" class="field-input" required :minlength="3" :maxlength="30" placeholder="traveler_name" /></div>
+            <div><div class="field-label">Display name *</div><ion-input v-model="userForm.display_name" class="field-input" required :maxlength="80" placeholder="Maria Cruz" /></div>
+            <div><div class="field-label">Role *</div><ion-select v-model="userForm.role" class="field-input" interface="popover"><ion-select-option value="user">Traveler</ion-select-option><ion-select-option value="admin">Administrator</ion-select-option></ion-select></div>
+            <div><div class="field-label">{{ editingUser ? 'New password (optional)' : 'Password *' }}</div><ion-input v-model="userForm.password" class="field-input" type="password" :required="!editingUser" :minlength="6" placeholder="At least 6 characters" /></div>
+            <p v-if="editingUser" class="muted" style="font-size:13px;margin:0">Leave the password blank to keep the current password.</p>
+            <p v-if="userMessage" class="feedback form-feedback" :class="{ error: userError }" :role="userError ? 'alert' : 'status'">{{ userMessage }}</p>
+            <ion-button type="submit" expand="block" :disabled="busy">{{ busy ? 'Saving…' : editingUser ? 'Save changes' : 'Create user' }}</ion-button>
+          </form>
+        </ion-content>
+      </ion-modal>
+
     </ion-split-pane>
   </ion-page>
 </template>
@@ -250,12 +303,13 @@
 import { computed, onBeforeUnmount, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { onIonViewWillEnter, IonPage, IonHeader, IonToolbar, IonTitle, IonButtons, IonButton, IonContent, IonInput, IonTextarea, IonSelect, IonSelectOption, IonSplitPane, IonMenu, IonList, IonItem, IonLabel, IonIcon, IonFooter, IonMenuButton, IonSearchbar, IonModal, IonPopover } from '@ionic/vue';
-import { gridOutline, addCircleOutline, arrowForwardOutline, logOutOutline, addOutline, chevronUpOutline, closeOutline } from 'ionicons/icons';
+import { gridOutline, addCircleOutline, arrowForwardOutline, logOutOutline, addOutline, chevronUpOutline, closeOutline, peopleOutline, personAddOutline } from 'ionicons/icons';
 import { supabase } from '../lib/supabase';
 import type { TouristSpot, NearbyPlace } from '../lib/types';
 import { mapsSearch, openMaps } from '../lib/types';
 import { errorCode, errorMessage } from '../lib/errors';
 import { MAX_SPOT_PHOTOS, spotImages, uploadSpotPhotos, validateSpotPhotos, type SpotPhotoDraft } from '../lib/spotPhotos';
+import { createAdminUser, deleteAdminUser, loadAdminUsers, updateAdminUser, type AdminUser, type AdminUserInput } from '../lib/adminUsers';
 
 const router = useRouter();
 const adminLogoUrl = `${import.meta.env.BASE_URL}images/logo.jpg`;
@@ -266,6 +320,9 @@ const popoverEvent = ref<Event>();
 const spots = ref<TouristSpot[]>([]); const editing = ref(false); const busy = ref(false);
 const carinderiaCount = ref<number | null>(null);
 const photos = ref<SpotPhotoDraft[]>([]); const message = ref(''); const errorState = ref(false);
+const users = ref<AdminUser[]>([]); const userSearchQuery = ref(''); const userModalOpen = ref(false); const editingUser = ref<AdminUser | null>(null);
+const userMessage = ref(''); const userError = ref(false);
+const userForm = reactive({ id: '', email: '', username: '', display_name: '', role: 'user' as AdminUser['role'], password: '' });
 const form = reactive({ id: '', name: '', category: 'Nature', description: '', address: '', latitude: '', longitude: '',
   entrance_fee: '', opening_hours: '', best_time_to_visit: '', bucketListText: '' });
 type StoreDraft = { name: string; kind: 'Carinderia' | 'Sari-sari Store' | 'Other'; address: string; lat: string; lon: string };
@@ -275,11 +332,53 @@ const filteredSpots = computed(() => {
   const query = searchQuery.value.trim().toLowerCase();
   return spots.value.filter(spot => !query || [spot.name, spot.address, spot.category].some(value => value.toLowerCase().includes(query)));
 });
+const filteredUsers = computed(() => {
+  const query = userSearchQuery.value.trim().toLowerCase();
+  return users.value.filter(user => !query || [user.email, user.username, user.display_name ?? '', user.role].some(value => value.toLowerCase().includes(query)));
+});
 function openAddModal() {
   if (busy.value) return;
   startNew(); isModalOpen.value = true;
 }
 function closeModal() { if (!busy.value) isModalOpen.value = false; }
+function scrollToUsers() { document.getElementById('userboard')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+function resetUserForm() { Object.assign(userForm, { id: '', email: '', username: '', display_name: '', role: 'user', password: '' }); }
+function openAddUser() {
+  if (busy.value) return;
+  editingUser.value = null; resetUserForm(); userMessage.value = ''; userError.value = false; userModalOpen.value = true;
+}
+function openEditUser(user: AdminUser) {
+  if (busy.value) return;
+  editingUser.value = user;
+  Object.assign(userForm, { id: user.id, email: user.email, username: user.username, display_name: user.display_name ?? '', role: user.role, password: '' });
+  userMessage.value = ''; userError.value = false; userModalOpen.value = true;
+}
+function closeUserModal() { if (!busy.value) userModalOpen.value = false; }
+async function canDismissUserModal() { return !busy.value || !userModalOpen.value; }
+function formatUserDate(value: string) { return new Date(value).toLocaleDateString(); }
+function userInitials(user: AdminUser) { return (user.display_name || user.username).split(/\s+/).map(part => part[0]).join('').slice(0, 2).toUpperCase(); }
+function showUserError(error: unknown) { userError.value = true; userMessage.value = errorMessage(error, 'Could not load users.'); }
+async function saveUser() {
+  if (busy.value) return;
+  userMessage.value = ''; userError.value = false; busy.value = true;
+  const isEditing = !!editingUser.value;
+  try {
+    const input: AdminUserInput = { email: userForm.email, username: userForm.username, display_name: userForm.display_name, role: userForm.role, ...(userForm.password ? { password: userForm.password } : {}) };
+    if (!isEditing && !userForm.password) throw new Error('Enter a password for the new user.');
+    if (isEditing) await updateAdminUser(editingUser.value!.id, input);
+    else await createAdminUser(input);
+    await loadUsers();
+    userModalOpen.value = false; editingUser.value = null; resetUserForm(); userError.value = false; userMessage.value = isEditing ? 'User updated successfully.' : 'User created successfully.';
+  } catch (error) { showUserError(error); }
+  finally { busy.value = false; }
+}
+async function deleteUser(user: AdminUser) {
+  if (busy.value || !window.confirm(`Delete ${user.display_name || user.username} and their account?`)) return;
+  busy.value = true; userMessage.value = ''; userError.value = false;
+  try { await deleteAdminUser(user.id); await loadUsers(); userMessage.value = 'User deleted successfully.'; }
+  catch (error) { showUserError(error); }
+  finally { busy.value = false; }
+}
 async function openUserDashboard() { if (!busy.value) await router.push('/tourists'); }
 async function canDismissModal() { return !busy.value || !isModalOpen.value; }
 function presentPopover(event: Event) { popoverEvent.value = event; isPopoverOpen.value = true; }
@@ -343,6 +442,7 @@ async function loadSpots() {
     if (!result.error) carinderiaCount.value = result.count ?? null;
   } catch { /* Keep the summary unavailable while the destination list remains usable. */ }
 }
+async function loadUsers() { users.value = await loadAdminUsers(); }
 async function editSpot(spot: TouristSpot) {
   if (busy.value) return;
   busy.value = true; message.value = '';
@@ -441,7 +541,7 @@ async function logout() {
   busy.value = true; message.value = '';
   try {
     const { error } = await supabase.auth.signOut();
-    spots.value = []; startNew();
+    spots.value = []; users.value = []; startNew();
     if (error) throw error;
     await router.replace('/login');
   } catch (e) { showError(e); }
@@ -449,9 +549,11 @@ async function logout() {
 }
 onIonViewWillEnter(async () => {
   if (busy.value) return;
-  busy.value = true; message.value = ''; spots.value = [];
-  try { await loadSpots(); } catch (e) { showError(e); }
-  finally { busy.value = false; }
+  busy.value = true; message.value = ''; userMessage.value = ''; spots.value = []; users.value = [];
+  const [spotsResult, usersResult] = await Promise.allSettled([loadSpots(), loadUsers()]);
+  if (spotsResult.status === 'rejected') showError(spotsResult.reason);
+  if (usersResult.status === 'rejected') showUserError(usersResult.reason);
+  busy.value = false;
 });
 onBeforeUnmount(() => resetPhotos());
 </script>
