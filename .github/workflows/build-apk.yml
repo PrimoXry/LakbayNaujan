@@ -1,3 +1,4 @@
+
 name: Build Ionic Android APK
 
 on:
@@ -11,53 +12,56 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
-    defaults:
-      run:
-        working-directory: LakbayNaujan-1
-
     steps:
-      # 1. Get source code
+      # 1. Checkout repository
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2. Install Node.js
+      # 2. Setup Node.js
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: package-lock.json
 
-      # 3. Install Java
+      # 3. Setup Java
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: 17
+          java-version: '17'
 
       # 4. Install dependencies
       - name: Install dependencies
         run: npm ci
 
-      # 5. Build Ionic/Vue
+      # 5. Build Ionic app
       - name: Build Ionic app
         run: npm run build
 
-      # 6. Sync Capacitor Android
+      # 6. Sync Android
       - name: Sync Android
         run: npx cap sync android
 
-      # 7. Give Gradle permission
+      # 7. Generate Lakbay Naujan app icon
+      - name: Generate Android App Icon
+        run: npx capacitor-assets generate --android
+
+      # 8. Give Gradle permission
       - name: Make Gradle executable
         run: chmod +x android/gradlew
 
-      # 8. Build APK
+      # 9. Build APK
       - name: Build Debug APK
         run: |
           cd android
           ./gradlew assembleDebug
 
-      # 9. Upload APK
+      # 10. Upload APK
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: LakbayNaujan-1
+          name: LakbayNaujan-APK
           path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
