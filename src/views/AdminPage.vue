@@ -302,7 +302,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { onIonViewWillEnter, IonPage, IonHeader, IonToolbar, IonTitle, IonButtons, IonButton, IonContent, IonInput, IonTextarea, IonSelect, IonSelectOption, IonSplitPane, IonMenu, IonList, IonItem, IonLabel, IonIcon, IonFooter, IonMenuButton, IonSearchbar, IonModal, IonPopover } from '@ionic/vue';
+import { alertController, onIonViewWillEnter, IonPage, IonHeader, IonToolbar, IonTitle, IonButtons, IonButton, IonContent, IonInput, IonTextarea, IonSelect, IonSelectOption, IonSplitPane, IonMenu, IonList, IonItem, IonLabel, IonIcon, IonFooter, IonMenuButton, IonSearchbar, IonModal, IonPopover } from '@ionic/vue';
 import { gridOutline, addCircleOutline, arrowForwardOutline, logOutOutline, addOutline, chevronUpOutline, closeOutline, peopleOutline, personAddOutline } from 'ionicons/icons';
 import { supabase } from '../lib/supabase';
 import type { TouristSpot, NearbyPlace } from '../lib/types';
@@ -382,7 +382,22 @@ async function deleteUser(user: AdminUser) {
 async function openUserDashboard() { if (!busy.value) await router.push('/tourists'); }
 async function canDismissModal() { return !busy.value || !isModalOpen.value; }
 function presentPopover(event: Event) { popoverEvent.value = event; isPopoverOpen.value = true; }
-async function handleLogout() { isPopoverOpen.value = false; await logout(); }
+async function handleLogout() {
+  const alert = await alertController.create({
+    cssClass: 'logout-confirm-alert',
+    header: 'Log out?',
+    message: 'Are you sure you want to end the administrator session?',
+    buttons: [
+      { text: 'Cancel', role: 'cancel' },
+      { text: 'Log out', role: 'destructive' },
+    ],
+  });
+  await alert.present();
+  const { role } = await alert.onDidDismiss();
+  if (role !== 'destructive') return;
+  isPopoverOpen.value = false;
+  await logout();
+}
 
 function coord(value: unknown, max: number): number | null {
   const stringValue = String(value ?? '').trim();

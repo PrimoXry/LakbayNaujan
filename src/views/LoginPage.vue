@@ -42,7 +42,7 @@
               />
             </div>
 
-            <div class="form-field">
+            <div class="form-field password-field">
               <label class="field-label" for="login-password">
                 Password
               </label>
@@ -51,11 +51,19 @@
                 id="login-password"
                 v-model="password"
                 class="field-input"
-                type="password"
+                :type="showPassword ? 'text' : 'password'"
                 autocomplete="current-password"
                 required
                 placeholder="Enter password"
               />
+              <button
+                type="button"
+                class="password-toggle"
+                :aria-label="showPassword ? 'Hide password' : 'Show password'"
+                @click="showPassword = !showPassword"
+              >
+                <ion-icon :icon="showPassword ? eyeOffOutline : eyeOutline" aria-hidden="true" />
+              </button>
             </div>
 
             <p v-if="message" class="feedback error" role="alert">
@@ -138,7 +146,9 @@ import {
   IonContent,
   IonInput,
   IonButton,
+  IonIcon,
 } from '@ionic/vue';
+import { eyeOffOutline, eyeOutline } from 'ionicons/icons';
 
 import { supabase } from '../lib/supabase';
 import { destinationForUser } from '../lib/auth';
@@ -153,6 +163,7 @@ const route = useRoute();
 
 const email = ref('');
 const password = ref('');
+const showPassword = ref(false);
 const busy = ref(false);
 const message = ref('');
 const needsVerification = ref(false);
@@ -404,6 +415,46 @@ async function signInWithGoogle() {
   gap: 7px;
   width: 100%;
   min-width: 0;
+}
+
+.password-field {
+  position: relative;
+}
+
+.password-field .field-label {
+  padding-right: 44px;
+}
+
+.password-field .field-input {
+  --padding-end: 48px;
+}
+
+.password-toggle {
+  position: absolute;
+  right: 8px;
+  bottom: 7px;
+  z-index: 2;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 34px;
+  padding: 0;
+
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #52705b;
+  font-size: 21px;
+  cursor: pointer;
+}
+
+.password-toggle:hover,
+.password-toggle:focus-visible {
+  background: rgba(36, 118, 71, 0.12);
+  color: #247647;
+  outline: none;
 }
 
 .field-label {

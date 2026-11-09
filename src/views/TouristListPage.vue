@@ -62,7 +62,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { IonPage, IonHeader, IonToolbar, IonContent, IonFooter, IonIcon, IonPopover, onIonViewWillEnter } from '@ionic/vue';
+import { alertController, IonPage, IonHeader, IonToolbar, IonContent, IonFooter, IonIcon, IonPopover, onIonViewWillEnter } from '@ionic/vue';
 import { leafOutline, locationOutline, compassOutline, bookmarkOutline, homeOutline, personOutline, searchOutline, arrowForwardOutline, trailSignOutline, logOutOutline, listOutline } from 'ionicons/icons';
 import ProfileAvatar from '../components/ProfileAvatar.vue';
 import ProfileSettings from '../components/ProfileSettings.vue';
@@ -177,8 +177,22 @@ async function toggleSave(spot: TouristSpot) {
   } catch (error) { if (id === userId.value) saveMessage.value = accountError(error, 'Could not update your saved spots.'); }
   finally { if (id === userId.value) savingIds.value = savingIds.value.filter(value => value !== spot.id); }
 }
+async function confirmLogout() {
+  const alert = await alertController.create({
+    cssClass: 'logout-confirm-alert',
+    header: 'Log out?',
+    message: 'Are you sure you want to log out of your LakbayNaujan account?',
+    buttons: [
+      { text: 'Cancel', role: 'cancel' },
+      { text: 'Log out', role: 'destructive' },
+    ],
+  });
+  await alert.present();
+  const { role } = await alert.onDidDismiss();
+  return role === 'destructive';
+}
 async function logout() {
-  if (loggingOut.value) return;
+  if (loggingOut.value || !(await confirmLogout())) return;
   loggingOut.value = true; accountMessage.value = '';
   try { const { error } = await supabase.auth.signOut(); if (error) throw error; clearAccount(); await router.replace('/login'); }
   catch (error) { accountMessage.value = accountError(error, 'Could not log out. Please try again.'); }

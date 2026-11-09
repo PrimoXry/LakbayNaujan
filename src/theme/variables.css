@@ -59,6 +59,18 @@
   --app-severe-text: #ffbcb2;
   --app-severe-border: #e38c7d;
 }
+
+.logout-confirm-alert {
+  --width: min(92vw, 370px);
+  --max-width: 370px;
+  --min-width: 280px;
+  --border-radius: 22px;
+  --backdrop-opacity: 0.62;
+  --background: var(--app-surface);
+  --color: var(--ion-text-color);
+  --button-color: var(--app-accent);
+  --box-shadow: 0 20px 65px rgba(16, 55, 37, 0.28);
+}
 * { box-sizing: border-box; }
 .page-shell { max-width: 900px; margin: 0 auto; padding: 16px; }
 .hero { background: linear-gradient(130deg, #154d37, #379067); border-radius: 18px; padding: 26px; color: white; margin: 10px 0 20px; }
